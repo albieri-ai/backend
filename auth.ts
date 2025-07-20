@@ -14,7 +14,12 @@ import * as schema from "./src/database/schema";
 const drizzleInstance = drizzle(new pg.Client(), { schema });
 
 export const auth = betterAuth({
-  appName: "backend",
+  appName: "albieri",
+  emailAndPassword: {
+    enabled: true,
+    minPasswordLength: 8,
+    revokeSessionsOnPasswordReset: true,
+  },
   database: drizzleAdapter(drizzleInstance, {
     provider: "pg",
     usePlural: true,

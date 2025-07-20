@@ -1,9 +1,10 @@
 version: "3.5"
+name: albieri
 services:
   db:
     image: pgvector/pgvector:pg15
     restart: always
-    container_name: postgres
+    container_name: albieri-db
     environment:
       POSTGRES_DB: postgres
       POSTGRES_USER: postgres
@@ -13,6 +14,6 @@ services:
   redis:
     image: redis:latest
     restart: always
-    container_name: redis
+    container_name: albieri-redis
     ports:
       - "6378:6379"
