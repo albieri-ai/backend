@@ -15,6 +15,14 @@ const drizzleInstance = drizzle(new pg.Client(), { schema });
 
 export const auth = betterAuth({
   appName: "albieri",
+  user: {
+    additionalFields: {
+      whatsapp: {
+        type: "string",
+        required: false,
+      },
+    },
+  },
   emailAndPassword: {
     enabled: true,
     minPasswordLength: 8,

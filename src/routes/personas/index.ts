@@ -73,206 +73,210 @@ export default function (
     };
   };
 
-  fastify.get<{ Params: z.infer<typeof PersonaBySlugSchema> }>(
-    "/:personaSlug",
-    {
-      schema: {
-        params: PersonaBySlugSchema,
-      },
-    },
-    async (request, reply) => {
-      const persona = await getPersonaBySlug(request.params.personaSlug);
+  fastify.get("/", (request, reply) => {
+    reply.send({ message: "Hello from persona!" });
+  });
 
-      if (!persona) {
-        reply.status(404).send({ message: "Persona not found" });
+  // fastify.get<{ Params: z.infer<typeof PersonaBySlugSchema> }>(
+  //   "/:personaSlug",
+  //   {
+  //     schema: {
+  //       params: PersonaBySlugSchema,
+  //     },
+  //   },
+  //   async (request, reply) => {
+  //     const persona = await getPersonaBySlug(request.params.personaSlug);
 
-        return;
-      }
+  //     if (!persona) {
+  //       reply.status(404).send({ message: "Persona not found" });
 
-      reply.send({
-        data: persona,
-      });
+  //       return;
+  //     }
 
-      reply.send({ message: "Hello from persona!" });
-    },
-  );
+  //     reply.send({
+  //       data: persona,
+  //     });
 
-  fastify.post<{
-    Body: z.infer<typeof PersonaCreateSchema>;
-  }>(
-    "/",
-    {
-      schema: {
-        body: z.toJSONSchema(PersonaCreateSchema),
-      },
-      preValidation: (request, reply) => {
-        if (!request.user) {
-          return reply.code(401).send({ error: "Unauthorized" });
-        }
-      },
-    },
-    async (request, reply) => {
-      const userOrganizations = await fastify.db
-        .select({ ...getTableColumns(organizations) })
-        .from(members)
-        .leftJoin(organizations, eq(organizations.id, members.organizationId))
-        .where(eq(members.userId, request.user!.id));
+  //     reply.send({ message: "Hello from persona!" });
+  //   },
+  // );
 
-      if (userOrganizations.length > 0) {
-        reply.code(400).send({ error: "User already has an organization" });
+  // fastify.post<{
+  //   Body: z.infer<typeof PersonaCreateSchema>;
+  // }>(
+  //   "/",
+  //   {
+  //     schema: {
+  //       body: z.toJSONSchema(PersonaCreateSchema),
+  //     },
+  //     preValidation: (request, reply) => {
+  //       if (!request.user) {
+  //         return reply.code(401).send({ error: "Unauthorized" });
+  //       }
+  //     },
+  //   },
+  //   async (request, reply) => {
+  //     const userOrganizations = await fastify.db
+  //       .select({ ...getTableColumns(organizations) })
+  //       .from(members)
+  //       .leftJoin(organizations, eq(organizations.id, members.organizationId))
+  //       .where(eq(members.userId, request.user!.id));
 
-        return;
-      }
+  //     if (userOrganizations.length > 0) {
+  //       reply.code(400).send({ error: "User already has an organization" });
 
-      await fastify.db.transaction(async (trx) => {
-        const organization = await fastify.auth.api.createOrganization({
-          body: {
-            name: request.body.name,
-            slug: request.body.slug,
-            userId: request.user!.id,
-          },
-        });
+  //       return;
+  //     }
 
-        if (!organization) {
-          reply.code(500).send({ error: "Failed to create organization" });
+  //     await fastify.db.transaction(async (trx) => {
+  //       const organization = await fastify.auth.api.createOrganization({
+  //         body: {
+  //           name: request.body.name,
+  //           slug: request.body.slug,
+  //           userId: request.user!.id,
+  //         },
+  //       });
 
-          return;
-        }
+  //       if (!organization) {
+  //         reply.code(500).send({ error: "Failed to create organization" });
 
-        await trx.insert(personas).values({
-          ...request.body,
-          organization: organization.id,
-          createdBy: request.user!.id,
-        });
-      });
+  //         return;
+  //       }
 
-      const createdPersona = await getPersonaBySlug(request.body.slug);
+  //       await trx.insert(personas).values({
+  //         ...request.body,
+  //         organization: organization.id,
+  //         createdBy: request.user!.id,
+  //       });
+  //     });
 
-      reply.code(201).send({ data: createdPersona });
-    },
-  );
+  //     const createdPersona = await getPersonaBySlug(request.body.slug);
 
-  fastify.patch<{
-    Params: z.infer<typeof PersonaBySlugSchema>;
-    Body: z.infer<typeof PersonaUpdateSchema>;
-  }>(
-    "/:personaSlug",
-    {
-      schema: {
-        params: z.toJSONSchema(PersonaBySlugSchema),
-        body: z.toJSONSchema(PersonaUpdateSchema),
-      },
-      preValidation: (request, reply) => {
-        if (!request.user) {
-          return reply.code(401).send({ error: "Unauthorized" });
-        }
-      },
-    },
-    async (request, reply) => {
-      const isMember = await fastify.db
-        .select({ id: members.id })
-        .from(members)
-        .leftJoin(organizations, eq(organizations.id, members.organizationId))
-        .leftJoin(personas, eq(personas.organization, personas.id))
-        .where(
-          and(
-            eq(personas.slug, request.params.personaSlug),
-            isNull(personas.deletedAt),
-          ),
-        )
-        .then((res) => res.length > 0);
+  //     reply.code(201).send({ data: createdPersona });
+  //   },
+  // );
 
-      if (!isMember) {
-        return reply.code(403).send({ error: "Forbidden" });
-      }
+  // fastify.patch<{
+  //   Params: z.infer<typeof PersonaBySlugSchema>;
+  //   Body: z.infer<typeof PersonaUpdateSchema>;
+  // }>(
+  //   "/:personaSlug",
+  //   {
+  //     schema: {
+  //       params: z.toJSONSchema(PersonaBySlugSchema),
+  //       body: z.toJSONSchema(PersonaUpdateSchema),
+  //     },
+  //     preValidation: (request, reply) => {
+  //       if (!request.user) {
+  //         return reply.code(401).send({ error: "Unauthorized" });
+  //       }
+  //     },
+  //   },
+  //   async (request, reply) => {
+  //     const isMember = await fastify.db
+  //       .select({ id: members.id })
+  //       .from(members)
+  //       .leftJoin(organizations, eq(organizations.id, members.organizationId))
+  //       .leftJoin(personas, eq(personas.organization, personas.id))
+  //       .where(
+  //         and(
+  //           eq(personas.slug, request.params.personaSlug),
+  //           isNull(personas.deletedAt),
+  //         ),
+  //       )
+  //       .then((res) => res.length > 0);
 
-      await fastify.db.transaction(async (trx) => {
-        await trx
-          .update(personas)
-          .set(request.body)
-          .where(eq(personas.slug, request.params.personaSlug))
-          .returning();
+  //     if (!isMember) {
+  //       return reply.code(403).send({ error: "Forbidden" });
+  //     }
 
-        if (request.body.name || request.body.slug) {
-          await trx
-            .update(organizations)
-            .set({
-              ...("name" in request.body ? { name: request.body.name } : {}),
-              ...("slug" in request.body ? { slug: request.body.slug } : {}),
-            })
-            .where(eq(organizations.id, personas.organization))
-            .returning();
-        }
-      });
+  //     await fastify.db.transaction(async (trx) => {
+  //       await trx
+  //         .update(personas)
+  //         .set(request.body)
+  //         .where(eq(personas.slug, request.params.personaSlug))
+  //         .returning();
 
-      const updatedPersona = await getPersonaBySlug(request.params.personaSlug);
+  //       if (request.body.name || request.body.slug) {
+  //         await trx
+  //           .update(organizations)
+  //           .set({
+  //             ...("name" in request.body ? { name: request.body.name } : {}),
+  //             ...("slug" in request.body ? { slug: request.body.slug } : {}),
+  //           })
+  //           .where(eq(organizations.id, personas.organization))
+  //           .returning();
+  //       }
+  //     });
 
-      reply.send({ data: updatedPersona });
-    },
-  );
+  //     const updatedPersona = await getPersonaBySlug(request.params.personaSlug);
 
-  fastify.put<{
-    Body: { topics: number[] };
-    Params: z.infer<typeof PersonaBySlugSchema>;
-  }>(
-    "/:personaSlug/topics",
-    {
-      schema: {
-        body: z.toJSONSchema(
-          z.object({
-            topics: z.array(z.number().positive()),
-          }),
-        ),
-        params: z.toJSONSchema(PersonaBySlugSchema),
-      },
-    },
-    async (request, reply) => {
-      const updatedTopics = await fastify.db.transaction(async (trx) => {
-        const [persona] = await trx
-          .select({ id: personas.id })
-          .from(personas)
-          .where(
-            and(
-              eq(personas.slug, request.params.personaSlug),
-              isNull(personas.deletedAt),
-            ),
-          );
+  //     reply.send({ data: updatedPersona });
+  //   },
+  // );
 
-        if (!persona) {
-          reply.status(404).send({ error: "Persona not found" });
+  // fastify.put<{
+  //   Body: { topics: number[] };
+  //   Params: z.infer<typeof PersonaBySlugSchema>;
+  // }>(
+  //   "/:personaSlug/topics",
+  //   {
+  //     schema: {
+  //       body: z.toJSONSchema(
+  //         z.object({
+  //           topics: z.array(z.number().positive()),
+  //         }),
+  //       ),
+  //       params: z.toJSONSchema(PersonaBySlugSchema),
+  //     },
+  //   },
+  //   async (request, reply) => {
+  //     const updatedTopics = await fastify.db.transaction(async (trx) => {
+  //       const [persona] = await trx
+  //         .select({ id: personas.id })
+  //         .from(personas)
+  //         .where(
+  //           and(
+  //             eq(personas.slug, request.params.personaSlug),
+  //             isNull(personas.deletedAt),
+  //           ),
+  //         );
 
-          return;
-        }
+  //       if (!persona) {
+  //         reply.status(404).send({ error: "Persona not found" });
 
-        await trx
-          .delete(personaTopics)
-          .where(
-            and(
-              eq(personaTopics.persona, persona.id),
-              notInArray(personaTopics.topic, request.body.topics),
-            ),
-          );
+  //         return;
+  //       }
 
-        await trx
-          .insert(personaTopics)
-          .values(
-            request.body.topics.map((topic) => ({
-              persona: persona.id,
-              topic,
-            })),
-          )
-          .onConflictDoNothing({
-            target: [personaTopics.persona, personaTopics.topic],
-          });
+  //       await trx
+  //         .delete(personaTopics)
+  //         .where(
+  //           and(
+  //             eq(personaTopics.persona, persona.id),
+  //             notInArray(personaTopics.topic, request.body.topics),
+  //           ),
+  //         );
 
-        return trx
-          .select({ id: topics.id, name: topics.name })
-          .from(personaTopics)
-          .leftJoin(topics, eq(topics.id, personaTopics.topic))
-          .where(eq(personaTopics.persona, persona.id));
-      });
+  //       await trx
+  //         .insert(personaTopics)
+  //         .values(
+  //           request.body.topics.map((topic) => ({
+  //             persona: persona.id,
+  //             topic,
+  //           })),
+  //         )
+  //         .onConflictDoNothing({
+  //           target: [personaTopics.persona, personaTopics.topic],
+  //         });
 
-      return updatedTopics;
-    },
-  );
+  //       return trx
+  //         .select({ id: topics.id, name: topics.name })
+  //         .from(personaTopics)
+  //         .leftJoin(topics, eq(topics.id, personaTopics.topic))
+  //         .where(eq(personaTopics.persona, persona.id));
+  //     });
+
+  //     return updatedTopics;
+  //   },
+  // );
 }

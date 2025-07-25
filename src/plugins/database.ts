@@ -1,25 +1,14 @@
 import type { FastifyInstance, FastifyPluginAsync } from "fastify";
 import fp from "fastify-plugin";
 import pg from "pg";
-import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import path from "node:path";
-import * as schema from "../database/schema";
+import { createDb } from "../database/db";
 
 const drizzlePlugin: FastifyPluginAsync = async (fastify: FastifyInstance) => {
-  // Create PostgreSQL client
-  const pgClient = new pg.Client({
-    connectionString: fastify.config.DATABASE_URL,
-  });
-
   try {
-    // Connect to the database
-    await pgClient.connect();
-
-    // Create Drizzle ORM instance
-    const db = drizzle(pgClient, {
-      schema,
-      logger: fastify.log.level === "debug",
+    const { db, client: pgClient } = await createDb({
+      connectionString: fastify.config.DATABASE_URL,
     });
 
     // Run migrations if a migrations folder is specified

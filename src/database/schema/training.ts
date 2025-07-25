@@ -20,6 +20,12 @@ const TrainingAssetType = pgEnum("training_asset_type", [
   "webpage",
 ]);
 
+const TrainingAssetStatus = pgEnum("training_asset_status", [
+  "pending",
+  "error",
+  "ready",
+]);
+
 export const trainingAssets = pgTable(
   "training_assets",
   {
@@ -27,7 +33,8 @@ export const trainingAssets = pgTable(
       .primaryKey()
       .$default(() => generateId()),
     type: TrainingAssetType("asset_type").notNull(),
-    enabled: boolean().notNull(),
+    status: TrainingAssetStatus("status").notNull().default("pending"),
+    enabled: boolean().notNull().default(false),
     persona: varchar().references(() => personas.id, { onDelete: "cascade" }),
     createdBy: text()
       .notNull()
@@ -106,7 +113,7 @@ export const assetChunks = pgTable(
     asset: text()
       .notNull()
       .references(() => trainingAssets.id, { onDelete: "cascade" }),
-    summary: text().notNull(),
+    text: text().notNull(),
     embeddings: vector({ dimensions: 1536 }).notNull(),
     createdAt: timestamp().defaultNow(),
   },

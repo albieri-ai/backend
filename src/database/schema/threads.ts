@@ -38,7 +38,7 @@ export const threads = pgTable(
     deletedAt: timestamp(),
   },
   (table) => ({
-    threadPersonaAuthorIdx: index().on(
+    threadPersonaAuthorIdx: index("thread_persona_author_idx").on(
       table.persona,
       table.author,
       desc(table.createdAt),

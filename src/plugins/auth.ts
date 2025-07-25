@@ -13,6 +13,14 @@ import fp from "fastify-plugin";
 const authPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
   const authClient = betterAuth({
     appName: "albieri",
+    user: {
+      additionalFields: {
+        whatsapp: {
+          type: "string",
+          required: false,
+        },
+      },
+    },
     emailAndPassword: {
       enabled: true,
       minPasswordLength: 8,

@@ -8,6 +8,8 @@ import type pg from "pg";
 import type { Session, User } from "better-auth";
 import type { auth } from "../auth";
 import { S3Client } from "@aws-sdk/client-s3";
+import { trigger } from "@trigger.dev/sdk/dist/commonjs/v3/shared";
+import { envvars } from "@trigger.dev/sdk/v3";
 
 async function createServer() {
   const server = fastify({
