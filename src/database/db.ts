@@ -3,19 +3,20 @@ import pg from "pg";
 import * as schema from "./schema";
 
 export async function createDb({
-  connectionString,
+	connectionString,
 }: {
-  connectionString: string;
+	connectionString: string;
 }) {
-  const pgClient = new pg.Client({
-    connectionString,
-  });
+	const pgClient = new pg.Client({
+		connectionString,
+	});
 
-  const db = drizzle(pgClient, {
-    schema,
-  });
+	const db = drizzle(pgClient, {
+		schema,
+		casing: "snake_case",
+	});
 
-  await pgClient.connect();
+	await pgClient.connect();
 
-  return { db, client: pgClient };
+	return { db, client: pgClient };
 }

@@ -33,6 +33,7 @@
     "@fastify/rate-limit": "^10.3.0",
     "@fastify/redis": "^7.0.2",
     "@fastify/sensible": "^6.0.3",
+    "@fastify/type-provider-json-schema-to-ts": "^5.0.0",
     "@langchain/community": "^0.3.49",
     "@langchain/core": "^0.3.66",
     "@langchain/openai": "^0.6.2",

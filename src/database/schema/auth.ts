@@ -1,4 +1,3 @@
-import { generateId } from "better-auth";
 import {
   pgTable,
   text,
@@ -26,6 +25,7 @@ export const users = pgTable("users", {
   banReason: text("ban_reason"),
   banExpires: timestamp("ban_expires"),
   isAnonymous: boolean("is_anonymous"),
+  whatsapp: text("whatsapp"),
 });
 
 export const sessions = pgTable("sessions", {
@@ -82,16 +82,16 @@ export const jwkss = pgTable("jwkss", {
 });
 
 export const organizations = pgTable("organizations", {
-  id: text("id").primaryKey().$default(generateId),
+  id: text("id").primaryKey(),
   name: text("name").notNull(),
   slug: text("slug").unique(),
   logo: text("logo"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").notNull(),
   metadata: text("metadata"),
 });
 
 export const members = pgTable("members", {
-  id: text("id").primaryKey().$default(generateId),
+  id: text("id").primaryKey(),
   organizationId: text("organization_id")
     .notNull()
     .references(() => organizations.id, { onDelete: "cascade" }),
@@ -99,7 +99,7 @@ export const members = pgTable("members", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   role: text("role").default("member").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").notNull(),
 });
 
 export const invitations = pgTable("invitations", {
