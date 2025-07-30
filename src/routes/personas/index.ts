@@ -21,7 +21,7 @@ const PersonaCreateSchema = z.object({
 	description: z.string().optional(),
 });
 
-const PersonaUpdateSchema = z.object({});
+const PersonaUpdateSchema = PersonaCreateSchema.partial();
 
 export default function (
 	fastify: FastifyInstance,
@@ -67,7 +67,7 @@ export default function (
 			...persona,
 			photo: {
 				...persona.photo,
-				url: `${fastify.config.SERVICE_URL}/storage/files/${persona.photo.id}`,
+				url: `${fastify.config.BACKEND_URL}/storage/files/${persona.photo.id}`,
 			},
 			topics: persona.topics.map((t) => t.topic),
 		};
@@ -112,15 +112,14 @@ export default function (
 		"/",
 		{
 			schema: {
-				body: z.toJSONSchema(PersonaCreateSchema),
-			},
-			preValidation: (request, reply) => {
-				if (!request.user) {
-					return reply.code(401).send({ error: "Unauthorized" });
-				}
+				body: PersonaCreateSchema,
 			},
 		},
 		async (request, reply) => {
+			if (!request.user) {
+				return reply.code(401).send({ error: "Unauthorized" });
+			}
+
 			const userOrganizations = await fastify.db
 				.select({ ...getTableColumns(organizations) })
 				.from(members)
@@ -168,21 +167,22 @@ export default function (
 		"/:personaSlug",
 		{
 			schema: {
-				params: z.toJSONSchema(PersonaBySlugSchema),
-				body: z.toJSONSchema(PersonaUpdateSchema),
-			},
-			preValidation: (request, reply) => {
-				if (!request.user) {
-					return reply.code(401).send({ error: "Unauthorized" });
-				}
+				params: PersonaBySlugSchema,
+				body: PersonaUpdateSchema,
 			},
 		},
 		async (request, reply) => {
+			if (!request.user) {
+				return reply.code(401).send({ error: "Unauthorized" });
+			}
+
 			const isMember = await fastify.db
-				.select({ id: members.id })
+				.select({
+					id: members.id,
+				})
 				.from(members)
 				.leftJoin(organizations, eq(organizations.id, members.organizationId))
-				.leftJoin(personas, eq(personas.organization, personas.id))
+				.leftJoin(personas, eq(personas.organization, organizations.id))
 				.where(
 					and(
 						eq(personas.slug, request.params.personaSlug),
@@ -196,6 +196,7 @@ export default function (
 			}
 
 			await fastify.db.transaction(async (trx) => {
+				console.log("body: ", request.body);
 				await trx
 					.update(personas)
 					.set(request.body)
@@ -227,15 +228,17 @@ export default function (
 		"/:personaSlug/topics",
 		{
 			schema: {
-				body: z.toJSONSchema(
-					z.object({
-						topics: z.array(z.number().positive()),
-					}),
-				),
-				params: z.toJSONSchema(PersonaBySlugSchema),
+				body: z.object({
+					topics: z.array(z.number().positive()),
+				}),
+				params: PersonaBySlugSchema,
 			},
 		},
 		async (request, reply) => {
+			if (!request.user) {
+				return reply.code(401).send({ error: "Unauthorized" });
+			}
+
 			const updatedTopics = await fastify.db.transaction(async (trx) => {
 				const [persona] = await trx
 					.select({ id: personas.id })

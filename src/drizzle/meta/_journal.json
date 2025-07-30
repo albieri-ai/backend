@@ -1,41 +1,41 @@
 {
-  "version": "7",
-  "dialect": "postgresql",
-  "entries": [
-    {
-      "idx": 0,
-      "version": "7",
-      "when": 1752850589082,
-      "tag": "0000_special_adam_destine",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1753054456532,
-      "tag": "0001_living_nebula",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1753456963332,
-      "tag": "0002_cultured_master_mold",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1753460769421,
-      "tag": "0003_dusty_nova",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1753460783525,
-      "tag": "0004_magical_wasp",
-      "breakpoints": true
-    }
-  ]
+	"version": "7",
+	"dialect": "postgresql",
+	"entries": [
+		{
+			"idx": 0,
+			"version": "7",
+			"when": 1752850589082,
+			"tag": "0000_special_adam_destine",
+			"breakpoints": true
+		},
+		{
+			"idx": 1,
+			"version": "7",
+			"when": 1753054456532,
+			"tag": "0001_living_nebula",
+			"breakpoints": true
+		},
+		{
+			"idx": 2,
+			"version": "7",
+			"when": 1753456963332,
+			"tag": "0002_cultured_master_mold",
+			"breakpoints": true
+		},
+		{
+			"idx": 3,
+			"version": "7",
+			"when": 1753460769421,
+			"tag": "0003_dusty_nova",
+			"breakpoints": true
+		},
+		{
+			"idx": 4,
+			"version": "7",
+			"when": 1753460783525,
+			"tag": "0004_magical_wasp",
+			"breakpoints": true
+		}
+	]
 }

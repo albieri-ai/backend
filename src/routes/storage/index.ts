@@ -52,7 +52,7 @@ export default function (
 		"/files/:fileId/_url",
 		{
 			schema: {
-				params: z.toJSONSchema(GetFileByIdParamsSchema),
+				params: GetFileByIdParamsSchema,
 			},
 		},
 		async (request, reply) => {
@@ -78,7 +78,7 @@ export default function (
 			return reply.send({
 				data: {
 					...file,
-					url: `${fastify.config.SERVICE_URL}/storage/files/${files.id}/url`,
+					url: `${fastify.config.BACKEND_URL}/storage/files/${files.id}/url`,
 				},
 			});
 		},
@@ -88,7 +88,7 @@ export default function (
 		"/files/:fileId/url",
 		{
 			schema: {
-				params: z.toJSONSchema(GetFileByIdParamsSchema),
+				params: GetFileByIdParamsSchema,
 			},
 		},
 		async (request, reply) => {
@@ -118,7 +118,7 @@ export default function (
 		"/files/:fileId/commit",
 		{
 			schema: {
-				params: z.toJSONSchema(GetFileByIdParamsSchema),
+				params: GetFileByIdParamsSchema,
 			},
 		},
 		async (request, reply) => {
@@ -142,7 +142,7 @@ export default function (
 			reply.send({
 				data: {
 					...file,
-					url: `${fastify.config.SERVICE_URL}/storage/files/${file.id}/url`,
+					url: `${fastify.config.BACKEND_URL}/storage/files/${file.id}/url`,
 				},
 			});
 		},
@@ -151,16 +151,15 @@ export default function (
 	fastify.post<{ Body: z.infer<typeof GenerateSignedUrlBodySchema> }>(
 		"/signed-url",
 		{
-			preValidation: (request, reply) => {
-				if (!request.user) {
-					return reply.code(401).send({ error: "Unauthorized" });
-				}
-			},
 			schema: {
-				body: z.toJSONSchema(GenerateSignedUrlBodySchema),
+				body: GenerateSignedUrlBodySchema,
 			},
 		},
 		async (request, reply) => {
+			if (!request.user) {
+				return reply.code(401).send({ error: "Unauthorized" });
+			}
+
 			const mimeType = mime.lookup(request.body.name);
 			const extension = mime.extension(request.body.name);
 
@@ -204,7 +203,7 @@ export default function (
 		"/multipart-upload",
 		{
 			schema: {
-				body: z.toJSONSchema(CreateMultipartUploadBodySchema),
+				body: CreateMultipartUploadBodySchema,
 			},
 		},
 		async (request, reply) => {
@@ -245,7 +244,7 @@ export default function (
 		"/multipart-upload/url",
 		{
 			schema: {
-				body: z.toJSONSchema(CreateMultipartUploadPartBodySchema),
+				body: CreateMultipartUploadPartBodySchema,
 			},
 		},
 		async (request, reply) => {
@@ -266,7 +265,7 @@ export default function (
 		"/multipart-upload/commit",
 		{
 			schema: {
-				body: z.toJSONSchema(CommitMultipartUploadBodySchema),
+				body: CommitMultipartUploadBodySchema,
 			},
 		},
 		async (request, reply) => {
@@ -304,7 +303,7 @@ export default function (
 			reply.send({
 				data: {
 					...file,
-					url: `${fastify.config.SERVICE_URL}/storage/files/${file.id}/url`,
+					url: `${fastify.config.BACKEND_URL}/storage/files/${file.id}/url`,
 				},
 			});
 		},

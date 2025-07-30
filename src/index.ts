@@ -7,7 +7,7 @@ import type * as schema from "./database/schema";
 import type pg from "pg";
 import type { Session, User } from "better-auth";
 import type { auth } from "../auth";
-import { S3Client } from "@aws-sdk/client-s3";
+import type { S3Client } from "@aws-sdk/client-s3";
 import {
 	serializerCompiler,
 	validatorCompiler,
@@ -21,6 +21,13 @@ async function createServer() {
 	server.setValidatorCompiler(validatorCompiler);
 	server.setSerializerCompiler(serializerCompiler);
 
+	server.register(require("@fastify/cors"), {
+		origin: "http://localhost:3000",
+		methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+		credentials: true,
+		maxAge: 86400,
+	});
+
 	await server.register(fastifyEnv, {
 		dotenv: true,
 		schema: {
@@ -33,7 +40,9 @@ async function createServer() {
 				"AWS_ACCESS_KEY_ID",
 				"AWS_SECRET_ACCESS_KEY",
 				"AWS_S3_BUCKET",
-				"SERVICE_URL",
+				"BACKEND_URL",
+				"GEMINI_API_KEY",
+				"GROQ_API_KEY",
 			],
 			properties: {
 				PORT: {
@@ -58,7 +67,13 @@ async function createServer() {
 				AWS_S3_BUCKET: {
 					type: "string",
 				},
-				SERVICE_URL: {
+				BACKEND_URL: {
+					type: "string",
+				},
+				GEMINI_API_KEY: {
+					type: "string",
+				},
+				GROQ_API_KEY: {
 					type: "string",
 				},
 			},
@@ -91,7 +106,9 @@ declare module "fastify" {
 			AWS_ACCESS_KEY_ID: string;
 			AWS_SECRET_ACCESS_KEY: string;
 			AWS_S3_BUCKET: string;
-			SERVICE_URL: string;
+			BACKEND_URL: string;
+			GEMINI_API_KEY: string;
+			GROQ_API_KEY: string;
 		};
 		db: NodePgDatabase<typeof schema> & { $client: pg.Client };
 		auth: typeof auth;

@@ -8,14 +8,11 @@ export default function (
 ) {
 	fastify.get<{ Params: { personaSlug: string } }>(
 		"/:personaSlug/threads",
-		{
-			preValidation: (request, reply) => {
-				if (!request.user) {
-					return reply.code(401).send({ error: "Unauthorized" });
-				}
-			},
-		},
 		async (request, reply) => {
+			if (!request.user) {
+				return reply.code(401).send({ error: "Unauthorized" });
+			}
+
 			const personaSlug = request.params.personaSlug;
 			const [persona] = await fastify.db
 				.select({ id: personas.id })
@@ -56,14 +53,11 @@ export default function (
 
 	fastify.get<{ Params: { personaSlug: string; threadId: string } }>(
 		"/:personaSlug/threads/:threadId",
-		{
-			preValidation: (request, reply) => {
-				if (!request.user) {
-					return reply.code(401).send({ error: "Unauthorized" });
-				}
-			},
-		},
 		async (request, reply) => {
+			if (!request.user) {
+				return reply.code(401).send({ error: "Unauthorized" });
+			}
+
 			const personaSlug = request.params.personaSlug;
 
 			const [persona] = await fastify.db
@@ -97,14 +91,11 @@ export default function (
 
 	fastify.delete<{ Params: { personaSlug: string; threadId: string } }>(
 		"/:personaSlug/threads/:threadId",
-		{
-			preValidation: (request, reply) => {
-				if (!request.user) {
-					return reply.code(401).send({ error: "Unauthorized" });
-				}
-			},
-		},
 		async (request, reply) => {
+			if (!request.user) {
+				return reply.code(401).send({ error: "Unauthorized" });
+			}
+
 			const [thread] = await fastify.db
 				.select()
 				.from(threads)
