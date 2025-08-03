@@ -1,7 +1,10 @@
-import { generateObject, generateText } from "ai";
+import { generateText, streamText } from "ai";
 import type { FastifyInstance, FastifyServerOptions } from "fastify";
 import { createGroq } from "@ai-sdk/groq";
 import { z } from "zod";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { and, eq, isNull } from "drizzle-orm";
+import { personas, threads } from "../../database/schema";
 
 export default function (
 	fastify: FastifyInstance,
@@ -9,6 +12,9 @@ export default function (
 ) {
 	const groq = createGroq({
 		apiKey: fastify.config.GROQ_API_KEY,
+	});
+	const gemini = createGoogleGenerativeAI({
+		apiKey: fastify.config.GEMINI_API_KEY,
 	});
 
 	fastify.post<{ Body: { text: string } }>(
@@ -38,17 +44,58 @@ export default function (
 		},
 	);
 
-	// fastify.post("/chat", {}, (request, reply) => {
-	// 	const result = streamText({
-	// 		model: "gpt-3.5-turbo",
-	// 		prompt: "Hello, world!",
-	// 	});
+	fastify.post<{ Params: { personaSlug: string; chatID: string } }>(
+		"/:personaSlug/chats/:chatID",
+		{
+			schema: {
+				params: z.object({
+					personaSlug: z.string(),
+					chatID: z.string(),
+				}),
+			},
+		},
+		async (request, reply) => {
+			const persona = await fastify.db
+				.select()
+				.from(personas)
+				.where(
+					and(
+						eq(personas.slug, request.params!.personaSlug),
+						isNull(personas.deletedAt),
+					),
+				)
+				.then(([res]) => res);
 
-	// 	reply.header("X-Vercel-AI-Data-Stream", "v1");
-	// 	reply.header("Content-Type", "text/plain; charset=utf-8");
+			if (!persona) {
+				reply.status(404).send({ error: "Persona not found" });
 
-	// 	return reply.send(result.toDataStream({ data }));
-	// });
+				return;
+			}
+
+			const chat = await fastify.db
+				.select()
+				.from(threads)
+				.where(
+					and(
+						eq(threads.id, request.params!.chatID),
+						eq(threads.persona, persona.id),
+					),
+				);
+
+			if (!chat) {
+			}
+
+			const result = streamText({
+				model: gemini("gemini-2.5-flash"),
+				prompt: "Hello, world!",
+			});
+
+			reply.header("X-Vercel-AI-Data-Stream", "v1");
+			reply.header("Content-Type", "text/plain; charset=utf-8");
+
+			return reply.send(result.toDataStream());
+		},
+	);
 
 	// fastify.post("/goal", {}, async (request, reply) => {
 	// 	const result = await generateText({

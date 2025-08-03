@@ -1,8 +1,13 @@
 import { defineConfig } from "@trigger.dev/sdk/v3";
+import { ffmpeg } from "@trigger.dev/build/extensions/core";
 
 export default defineConfig({
 	project: "proj_uizzwombmfmewgglkqjt",
 	runtime: "node",
+	build: {
+		extensions: [ffmpeg()],
+		external: ["fluent-ffmpeg", "pdf-parse"],
+	},
 	logLevel: "log",
 	// The max compute seconds a task is allowed to run. If the task run exceeds this duration, it will be stopped.
 	// You can override this on an individual task.

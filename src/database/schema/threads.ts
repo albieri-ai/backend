@@ -10,7 +10,7 @@ import { users } from "./auth";
 import { generateId } from "better-auth";
 import { personas } from "./personas";
 import { desc, relations } from "drizzle-orm";
-import type { UIMessage } from "ai";
+import type { Message } from "ai";
 
 export const threads = pgTable(
 	"threads",
@@ -26,7 +26,7 @@ export const threads = pgTable(
 			.notNull()
 			.references(() => users.id, { onDelete: "cascade" }),
 
-		messages: jsonb().notNull().$type<UIMessage[]>(),
+		messages: jsonb().notNull().$type<Message[]>(),
 		model: varchar().notNull(),
 
 		deletedBy: varchar().references(() => users.id),

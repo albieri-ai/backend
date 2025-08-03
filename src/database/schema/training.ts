@@ -9,10 +9,13 @@ import {
 	vector,
 	integer,
 	index,
+	uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { personas } from "./personas";
 import { users } from "./auth";
 import { generateId } from "better-auth";
+import { files } from "./storage";
+import { youtubeChannelsVideos } from "./youtube";
 
 export const TrainingAssetType = pgEnum("training_asset_type", [
 	"file",
@@ -55,6 +58,10 @@ export const youtubeVideoAssets = pgTable(
 			.notNull()
 			.references(() => trainingAssets.id, { onDelete: "cascade" }),
 		url: text().notNull(),
+		videoId: text().notNull(),
+		channelVideo: text().references(() => youtubeChannelsVideos.id, {
+			onDelete: "set null",
+		}),
 	},
 	(table) => ({
 		youtubeVideoAssetsAssetIdx: index().on(table.asset),
@@ -68,7 +75,9 @@ export const fileAssets = pgTable(
 		asset: text()
 			.notNull()
 			.references(() => trainingAssets.id, { onDelete: "cascade" }),
-		url: text().notNull(),
+		fileId: text()
+			.references(() => files.id, { onDelete: "cascade" })
+			.unique(),
 	},
 	(table) => ({
 		fileAssetsAssetIdx: index().on(table.asset),

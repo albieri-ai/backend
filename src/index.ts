@@ -22,7 +22,7 @@ async function createServer() {
 	server.setSerializerCompiler(serializerCompiler);
 
 	server.register(require("@fastify/cors"), {
-		origin: "http://localhost:3000",
+		origin: ["http://localhost:3000", "*"],
 		methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
 		credentials: true,
 		maxAge: 86400,
@@ -43,6 +43,7 @@ async function createServer() {
 				"BACKEND_URL",
 				"GEMINI_API_KEY",
 				"GROQ_API_KEY",
+				"OPENAI_API_KEY",
 			],
 			properties: {
 				PORT: {
@@ -76,6 +77,9 @@ async function createServer() {
 				GROQ_API_KEY: {
 					type: "string",
 				},
+				OPENAI_API_KEY: {
+					type: "string",
+				},
 			},
 		},
 	});
@@ -87,6 +91,7 @@ async function createServer() {
 	await server.register(AutoLoad, {
 		dir: path.join(__dirname, "routes"),
 		dirNameRoutePrefix: true,
+		routeParams: true,
 	});
 
 	await server.listen({
@@ -109,6 +114,7 @@ declare module "fastify" {
 			BACKEND_URL: string;
 			GEMINI_API_KEY: string;
 			GROQ_API_KEY: string;
+			OPENAI_API_KEY: string;
 		};
 		db: NodePgDatabase<typeof schema> & { $client: pg.Client };
 		auth: typeof auth;

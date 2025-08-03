@@ -8,6 +8,6 @@
 		"forceConsistentCasingInFileNames": true,
 		"strict": true,
 		"skipLibCheck": true
-	}
-	// "include": ["auth.ts"]
+	},
+	"exclude": ["./drizzle.config.ts", "./trigger.config.ts"]
 }
