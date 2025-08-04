@@ -12,6 +12,7 @@ import {
 	serializerCompiler,
 	validatorCompiler,
 } from "fastify-type-provider-zod";
+import { Axios, AxiosInstance } from "axios";
 
 async function createServer() {
 	const server = fastify({
@@ -20,6 +21,12 @@ async function createServer() {
 
 	server.setValidatorCompiler(validatorCompiler);
 	server.setSerializerCompiler(serializerCompiler);
+	server.setNotFoundHandler((_, reply) =>
+		reply.status(404).send({ error: "Not Found" }),
+	);
+	server.setErrorHandler((error, _, reply) =>
+		reply.status(error.statusCode || 500).send({ error: error.message }),
+	);
 
 	server.register(require("@fastify/cors"), {
 		origin: ["http://localhost:3000", "*"],
@@ -44,6 +51,7 @@ async function createServer() {
 				"GEMINI_API_KEY",
 				"GROQ_API_KEY",
 				"OPENAI_API_KEY",
+				"PAGARME_API_KEY",
 			],
 			properties: {
 				PORT: {
@@ -78,6 +86,9 @@ async function createServer() {
 					type: "string",
 				},
 				OPENAI_API_KEY: {
+					type: "string",
+				},
+				PAGARME_API_KEY: {
 					type: "string",
 				},
 			},
@@ -115,10 +126,12 @@ declare module "fastify" {
 			GEMINI_API_KEY: string;
 			GROQ_API_KEY: string;
 			OPENAI_API_KEY: string;
+			PAGARME_API_KEY: string;
 		};
 		db: NodePgDatabase<typeof schema> & { $client: pg.Client };
 		auth: typeof auth;
 		s3: S3Client;
+		payment: AxiosInstance;
 	}
 
 	interface FastifyRequest {

@@ -1,17 +1,9 @@
 import type { FastifyInstance, FastifyServerOptions } from "fastify";
-import {
-	createStandardRequest,
-	sendStandardResponse,
-} from "fastify-standard-request-reply";
 
 export default function (
 	fastify: FastifyInstance,
 	_opts: FastifyServerOptions,
 ) {
-	fastify.post("/api/test", async (_req, reply) => {
-		reply.send({ foo: "bar" });
-	});
-
 	fastify.route({
 		method: ["GET", "POST"],
 		url: "/api/auth/*",

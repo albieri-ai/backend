@@ -5,13 +5,9 @@ export default function (
 	fastify: FastifyInstance,
 	_opts: FastifyServerOptions,
 ) {
-	fastify.get("/", (_request, reply) => {
-		reply.send({ message: "Hello from persona training!" });
-	});
-
 	fastify.post("/assets", async (request, reply) => {
 		if (!request.user) {
-			return reply.code(401).send({ error: "Unauthorized" });
+			return reply.unauthorized();
 		}
 
 		await IngestYoutubeVideo.trigger({

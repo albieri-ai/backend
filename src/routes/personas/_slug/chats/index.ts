@@ -35,8 +35,7 @@ export default function (
 			.then(([res]) => res);
 
 		if (!persona) {
-			reply.status(404).send({ error: "Persona not found" });
-			return;
+			return reply.callNotFound();
 		}
 
 		const model = {

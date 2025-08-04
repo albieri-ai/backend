@@ -77,9 +77,7 @@ export default function (
 			const persona = await getPersonaBySlug(request.params.slug);
 
 			if (!persona) {
-				reply.status(404).send({ message: "Persona not found" });
-
-				return;
+				return reply.callNotFound();
 			}
 
 			return reply.send({
@@ -101,7 +99,7 @@ export default function (
 		},
 		async (request, reply) => {
 			if (!request.user) {
-				return reply.code(401).send({ error: "Unauthorized" });
+				return reply.unauthorized();
 			}
 
 			const isMember = await fastify.db
@@ -120,7 +118,7 @@ export default function (
 				.then((res) => res.length > 0);
 
 			if (!isMember) {
-				return reply.code(403).send({ error: "Forbidden" });
+				return reply.forbidden();
 			}
 
 			await fastify.db.transaction(async (trx) => {
@@ -163,7 +161,7 @@ export default function (
 		},
 		async (request, reply) => {
 			if (!request.user) {
-				return reply.code(401).send({ error: "Unauthorized" });
+				return reply.unauthorized();
 			}
 
 			const updatedTopics = await fastify.db.transaction(async (trx) => {
@@ -178,9 +176,7 @@ export default function (
 					);
 
 				if (!persona) {
-					reply.status(404).send({ error: "Persona not found" });
-
-					return;
+					return reply.callNotFound();
 				}
 
 				const [organizationMember] = await fastify.db
@@ -194,7 +190,7 @@ export default function (
 					);
 
 				if (!organizationMember) {
-					return reply.status(403).send({ error: "Forbidden" });
+					return reply.forbidden();
 				}
 
 				await trx

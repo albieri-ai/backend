@@ -87,7 +87,7 @@ export default function (
 		},
 		async (request, reply) => {
 			if (!request.user) {
-				return reply.code(401).send({ error: "Unauthorized" });
+				return reply.unauthorized();
 			}
 
 			const userOrganizations = await fastify.db

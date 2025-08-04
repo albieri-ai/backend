@@ -76,7 +76,7 @@ export default function (
 		},
 		async (request, reply) => {
 			if (!request.user) {
-				return reply.code(401).send({ error: "Unauthorized" });
+				return reply.unauthorized();
 			}
 
 			const [persona] = await fastify.db
@@ -90,7 +90,7 @@ export default function (
 				);
 
 			if (!persona) {
-				return reply.code(404).send({ error: "Not Found" });
+				return reply.callNotFound();
 			}
 
 			const [organizationMember] = await fastify.db
@@ -104,7 +104,7 @@ export default function (
 				);
 
 			if (!organizationMember) {
-				return reply.status(403).send({ error: "Forbidden" });
+				return reply.forbidden();
 			}
 
 			const asset = await fastify.db.transaction(async (trx) => {
@@ -158,7 +158,7 @@ export default function (
 		},
 		async (request, reply) => {
 			if (!request.user) {
-				return reply.code(401).send({ error: "Unauthorized" });
+				return reply.unauthorized();
 			}
 
 			const [persona] = await fastify.db
@@ -172,7 +172,7 @@ export default function (
 				);
 
 			if (!persona) {
-				return reply.code(404).send({ error: "Not Found" });
+				return reply.callNotFound();
 			}
 
 			const [organizationMember] = await fastify.db
@@ -186,7 +186,7 @@ export default function (
 				);
 
 			if (!organizationMember) {
-				return reply.status(403).send({ error: "Forbidden" });
+				return reply.forbidden();
 			}
 
 			const asset = await fastify.db.transaction(async (trx) => {
@@ -237,7 +237,7 @@ export default function (
 		"/accounts/youtube",
 		async (request, reply) => {
 			if (!request.user) {
-				return reply.code(401).send({ error: "Unauthorized" });
+				return reply.unauthorized();
 			}
 
 			const [persona] = await fastify.db
@@ -251,7 +251,7 @@ export default function (
 				);
 
 			if (!persona) {
-				return reply.code(404).send({ error: "Not Found" });
+				return reply.callNotFound();
 			}
 
 			const [organizationMember] = await fastify.db
@@ -265,7 +265,7 @@ export default function (
 				);
 
 			if (!organizationMember) {
-				return reply.status(403).send({ error: "Forbidden" });
+				return reply.forbidden();
 			}
 
 			const channels = await fastify.db
@@ -296,7 +296,7 @@ export default function (
 		},
 		async (request, reply) => {
 			if (!request.user) {
-				return reply.code(401).send({ error: "Unauthorized" });
+				return reply.unauthorized();
 			}
 
 			const [persona] = await fastify.db
@@ -310,7 +310,7 @@ export default function (
 				);
 
 			if (!persona) {
-				return reply.code(404).send({ error: "Not Found" });
+				return reply.callNotFound();
 			}
 
 			const [organizationMember] = await fastify.db
@@ -324,7 +324,7 @@ export default function (
 				);
 
 			if (!organizationMember) {
-				return reply.status(403).send({ error: "Forbidden" });
+				return reply.forbidden();
 			}
 
 			const [channel] = await fastify.db
@@ -384,7 +384,7 @@ export default function (
 		},
 		async (request, reply) => {
 			if (!request.user) {
-				return reply.code(401).send({ error: "Unauthorized" });
+				return reply.unauthorized();
 			}
 
 			const [persona] = await fastify.db
@@ -398,7 +398,7 @@ export default function (
 				);
 
 			if (!persona) {
-				return reply.code(404).send({ error: "Not Found" });
+				return reply.callNotFound();
 			}
 
 			const [organizationMember] = await fastify.db
@@ -412,7 +412,7 @@ export default function (
 				);
 
 			if (!organizationMember) {
-				return reply.status(403).send({ error: "Forbidden" });
+				return reply.forbidden();
 			}
 
 			const channel = await fastify.db

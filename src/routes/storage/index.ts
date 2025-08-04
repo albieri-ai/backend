@@ -72,7 +72,7 @@ export default function (
 				.where(eq(files.id, request.params.fileId));
 
 			if (!file) {
-				return reply.code(404).send({ error: "File not found" });
+				return reply.callNotFound();
 			}
 
 			return reply.send({
@@ -98,7 +98,7 @@ export default function (
 				.where(eq(files.id, request.params.fileId));
 
 			if (!file) {
-				return reply.code(404).send({ error: "File not found" });
+				return reply.callNotFound();
 			}
 
 			const command = new GetObjectCommand({
@@ -157,7 +157,7 @@ export default function (
 		},
 		async (request, reply) => {
 			if (!request.user) {
-				return reply.code(401).send({ error: "Unauthorized" });
+				return reply.unauthorized();
 			}
 
 			const mimeType = mime.lookup(request.body.name);

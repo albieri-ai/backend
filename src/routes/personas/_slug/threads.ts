@@ -12,7 +12,7 @@ export default function (
 		"/threads",
 		async (request, reply) => {
 			if (!request.user) {
-				return reply.code(401).send({ error: "Unauthorized" });
+				return reply.unauthorized();
 			}
 
 			const personaSlug = request.params.slug;
@@ -22,7 +22,7 @@ export default function (
 				.where(and(eq(personas.slug, personaSlug), isNull(personas.deletedAt)));
 
 			if (!persona) {
-				return reply.code(404).send({ error: "Persona not found" });
+				return reply.callNotFound();
 			}
 
 			const userThreads = await fastify.db.query.threads.findMany({
@@ -57,7 +57,7 @@ export default function (
 		Params: z.infer<typeof PersonaBySlugSchema> & { threadId: string };
 	}>("/threads/:threadId", async (request, reply) => {
 		if (!request.user) {
-			return reply.code(401).send({ error: "Unauthorized" });
+			return reply.unauthorized();
 		}
 
 		const personaSlug = request.params.slug;
@@ -68,7 +68,7 @@ export default function (
 			.where(and(eq(personas.slug, personaSlug), isNull(personas.deletedAt)));
 
 		if (!persona) {
-			return reply.code(404).send({ error: "Persona not found" });
+			return reply.callNotFound();
 		}
 
 		const [thread] = await fastify.db
@@ -84,7 +84,7 @@ export default function (
 			);
 
 		if (!thread) {
-			return reply.code(404).send({ error: "Thread not found" });
+			return reply.callNotFound();
 		}
 
 		reply.send({ data: thread });
@@ -94,7 +94,7 @@ export default function (
 		Params: z.infer<typeof PersonaBySlugSchema> & { threadId: string };
 	}>("/threads/:threadId", async (request, reply) => {
 		if (!request.user) {
-			return reply.code(401).send({ error: "Unauthorized" });
+			return reply.unauthorized();
 		}
 
 		const [thread] = await fastify.db
@@ -109,8 +109,7 @@ export default function (
 			);
 
 		if (!thread) {
-			reply.code(404).send({ error: "Persona not found" });
-			return;
+			return reply.callNotFound();
 		}
 
 		await fastify.db

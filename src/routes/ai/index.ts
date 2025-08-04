@@ -67,7 +67,7 @@ export default function (
 				.then(([res]) => res);
 
 			if (!persona) {
-				reply.status(404).send({ error: "Persona not found" });
+				reply.callNotFound();
 
 				return;
 			}
