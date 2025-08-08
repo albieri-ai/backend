@@ -1,4 +1,4 @@
-import { generateText, streamText } from "ai";
+import { generateText, Message, streamText } from "ai";
 import type { FastifyInstance, FastifyServerOptions } from "fastify";
 import { createGroq } from "@ai-sdk/groq";
 import { z } from "zod";
@@ -44,7 +44,10 @@ export default function (
 		},
 	);
 
-	fastify.post<{ Params: { personaSlug: string; chatID: string } }>(
+	fastify.post<{
+		Params: { personaSlug: string; chatID: string };
+		Body: { messages: Message[] };
+	}>(
 		"/:personaSlug/chats/:chatID",
 		{
 			schema: {
@@ -55,6 +58,10 @@ export default function (
 			},
 		},
 		async (request, reply) => {
+			if (!request.user?.id) {
+				return reply.forbidden();
+			}
+
 			const persona = await fastify.db
 				.select()
 				.from(personas)
@@ -72,22 +79,22 @@ export default function (
 				return;
 			}
 
-			const chat = await fastify.db
-				.select()
-				.from(threads)
-				.where(
-					and(
-						eq(threads.id, request.params!.chatID),
-						eq(threads.persona, persona.id),
-					),
-				);
+			// const chat = await fastify.db
+			// 	.select()
+			// 	.from(threads)
+			// 	.where(
+			// 		and(
+			// 			eq(threads.id, request.params!.chatID),
+			// 			eq(threads.persona, persona.id),
+			// 		),
+			// 	);
 
-			if (!chat) {
-			}
+			// if (!chat) {
+			// }
 
 			const result = streamText({
 				model: gemini("gemini-2.5-flash"),
-				prompt: "Hello, world!",
+				messages: request.body.messages,
 			});
 
 			reply.header("X-Vercel-AI-Data-Stream", "v1");
@@ -96,13 +103,4 @@ export default function (
 			return reply.send(result.toDataStream());
 		},
 	);
-
-	// fastify.post("/goal", {}, async (request, reply) => {
-	// 	const result = await generateText({
-	// 		model: "gpt-3.5-turbo",
-	// 		prompt: "",
-	// 	});
-
-	// 	reply.send({ data: { goal: result.text } });
-	// });
 }

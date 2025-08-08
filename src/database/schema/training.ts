@@ -19,8 +19,10 @@ import { youtubeChannelsVideos } from "./youtube";
 
 export const TrainingAssetType = pgEnum("training_asset_type", [
 	"file",
+	"video_file",
 	"youtube_video",
 	"webpage",
+	"hotmart",
 ]);
 
 export const TrainingAssetStatus = pgEnum("training_asset_status", [
@@ -59,7 +61,8 @@ export const youtubeVideoAssets = pgTable(
 			.references(() => trainingAssets.id, { onDelete: "cascade" }),
 		url: text().notNull(),
 		videoId: text().notNull(),
-		channelVideo: text().references(() => youtubeChannelsVideos.id, {
+		title: text().default("Título não disponível").notNull(),
+		channelVideo: integer().references(() => youtubeChannelsVideos.id, {
 			onDelete: "set null",
 		}),
 	},
@@ -91,6 +94,7 @@ export const webPageAssets = pgTable(
 		asset: text()
 			.notNull()
 			.references(() => trainingAssets.id, { onDelete: "cascade" }),
+		title: text().notNull(),
 		url: text().notNull(),
 	},
 	(table) => ({

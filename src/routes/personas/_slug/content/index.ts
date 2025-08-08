@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyServerOptions } from "fastify";
 import {
 	IngestYoutubeVideo,
 	IngestPdfDocument,
+	IngestVideoFile,
 } from "../../../../trigger/ingest";
 import {
 	trainingAssets,
@@ -9,15 +10,18 @@ import {
 	fileAssets,
 	files,
 	members,
+	webPageAssets,
 } from "../../../../database/schema";
 import { personas } from "../../../../database/schema";
-import { and, isNull, eq, sql } from "drizzle-orm";
+import { and, isNull, eq, sql, count, asc, desc } from "drizzle-orm";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { z } from "zod";
 import { youtubeChannels } from "../../../../database/schema/youtube";
 import { MonitorYoutubeChannel } from "../../../../trigger/youtube";
 import { schedules } from "@trigger.dev/sdk/v3";
+import axios from "axios";
+import { PersonaBySlugSchema } from "..";
 
 function extractYouTubeVideoId(urlString: string): string | null {
 	try {
@@ -58,10 +62,133 @@ function extractYouTubeVideoId(urlString: string): string | null {
 	}
 }
 
+const ListAssetSchema = z.object({
+	page: z.coerce.number().int().positive().default(1),
+	limit: z.coerce.number().int().positive().default(10),
+	orderBy: z
+		.enum([
+			"name:asc",
+			"name:desc",
+			"createdAt:asc",
+			"createdAt:desc",
+			"status:asc",
+			"status:desc",
+		])
+		.optional()
+		.default("name:asc"),
+});
+
 export default function (
 	fastify: FastifyInstance,
 	_opts: FastifyServerOptions,
 ) {
+	fastify.get<{
+		Params: { slug: string };
+		Querystring: z.infer<typeof ListAssetSchema>;
+	}>(
+		"/assets",
+		{
+			schema: {
+				querystring: ListAssetSchema,
+			},
+		},
+		async (request, reply) => {
+			if (!request.user) {
+				return reply.unauthorized();
+			}
+
+			const [persona] = await fastify.db
+				.select()
+				.from(personas)
+				.where(
+					and(
+						eq(personas.slug, request.params.slug),
+						isNull(personas.deletedAt),
+					),
+				);
+
+			if (!persona) {
+				return reply.callNotFound();
+			}
+
+			const [organizationMember] = await fastify.db
+				.select()
+				.from(members)
+				.where(
+					and(
+						eq(members.organizationId, persona.organization),
+						eq(members.userId, request.user!.id),
+					),
+				);
+
+			if (!organizationMember) {
+				return reply.forbidden();
+			}
+
+			const assetCount = await fastify.db
+				.select({ count: count().as("count") })
+				.from(trainingAssets)
+				.where(eq(trainingAssets.persona, persona.id))
+				.then(([res]) => res.count || 0);
+
+			const assetList = fastify.db.$with("asset_list").as(
+				fastify.db
+					.select({
+						id: trainingAssets.id,
+						source: trainingAssets.type,
+						name: sql`COALESCE(${youtubeVideoAssets.title}, ${files.originalName}, ${files.name}, ${webPageAssets.title})`.as(
+							"name",
+						),
+						enabled: trainingAssets.enabled,
+						status: trainingAssets.status,
+						createdAt: trainingAssets.createdAt,
+					})
+					.from(trainingAssets)
+					.leftJoin(
+						youtubeVideoAssets,
+						eq(youtubeVideoAssets.asset, trainingAssets.id),
+					)
+					.leftJoin(fileAssets, eq(fileAssets.asset, trainingAssets.id))
+					.leftJoin(files, eq(files.id, fileAssets.fileId))
+					.leftJoin(webPageAssets, eq(webPageAssets.asset, trainingAssets.id)),
+			);
+
+			const [field, operator] = request.query.orderBy.split(":");
+
+			const orderFn =
+				// @ts-expect-error filter is ok
+				operator === "asc" ? asc(assetList[field]) : desc(assetList[field]);
+
+			const assets = await fastify.db
+				.with(assetList)
+				.select()
+				.from(assetList)
+				.orderBy(orderFn)
+				.limit(request.query.limit)
+				.offset(request.query.limit * (request.query.page - 1));
+
+			const hasNextPage = assetCount > request.query.limit * request.query.page;
+			const previousPage = Math.min(
+				request.query.page - 1,
+				Math.ceil(assetCount / request.query.limit),
+			);
+			const hasPreviousPage =
+				previousPage > 0 && previousPage < request.query.page;
+
+			return reply.send({
+				data: assets,
+				pagination: {
+					totalRecords: assetCount,
+					totalPages: Math.ceil(assetCount / request.query.limit),
+					currentPage: request.query.page,
+					pageSize: request.query.limit,
+					nextPage: hasNextPage ? request.query.page + 1 : null,
+					previousPage: hasPreviousPage ? request.query.page - 1 : null,
+				},
+			});
+		},
+	);
+
 	fastify.post<{ Params: { slug: string }; Body: { url: string } }>(
 		"/assets/youtube-video",
 		{
@@ -126,9 +253,16 @@ export default function (
 					throw new Error("invalid url");
 				}
 
+				const { data } = await axios.get(
+					`https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&key=${process.env.YOUTUBE_API_KEY}`,
+				);
+
+				const title = data.items[0].snippet.title;
+
 				await trx.insert(youtubeVideoAssets).values({
 					asset: asset.id,
 					url: request.body.url,
+					title,
 					videoId,
 				});
 
@@ -145,7 +279,7 @@ export default function (
 	);
 
 	fastify.post<{ Params: { slug: string }; Body: { fileId: string } }>(
-		"/assets/pdf",
+		"/assets/file",
 		{
 			schema: {
 				params: z.object({
@@ -190,10 +324,20 @@ export default function (
 			}
 
 			const asset = await fastify.db.transaction(async (trx) => {
+				const file = await fastify.db
+					.select()
+					.from(files)
+					.where(eq(files.id, request.body.fileId))
+					.then(([res]) => res);
+
+				if (!file) {
+					throw new Error("File not found");
+				}
+
 				const asset = await trx
 					.insert(trainingAssets)
 					.values({
-						type: "youtube_video",
+						type: file.mimeType?.includes("video") ? "video_file" : "file",
 						status: "pending",
 						enabled: true,
 						persona: persona.id,
@@ -207,11 +351,6 @@ export default function (
 					fileId: request.body.fileId,
 				});
 
-				const [file] = await trx
-					.select()
-					.from(files)
-					.where(eq(files.id, request.body.fileId));
-
 				return { id: asset.id, file };
 			});
 
@@ -224,10 +363,17 @@ export default function (
 				expiresIn: 259200,
 			});
 
-			await IngestPdfDocument.trigger({
-				assetID: asset.id,
-				url: url,
-			});
+			if (asset.file.mimeType === "application/pdf") {
+				await IngestPdfDocument.trigger({
+					assetID: asset.id,
+					url,
+				});
+			} else if (asset.file.mimeType.startsWith("video/")) {
+				await IngestVideoFile.trigger({
+					assetID: asset.id,
+					url,
+				});
+			}
 
 			reply.code(204).send();
 		},
@@ -282,7 +428,10 @@ export default function (
 		},
 	);
 
-	fastify.post<{ Params: { slug: string }; Body: { url: string } }>(
+	fastify.post<{
+		Params: { slug: string };
+		Body: { url: string; keepSynced: boolean };
+	}>(
 		"/accounts/youtube",
 		{
 			schema: {
@@ -291,6 +440,7 @@ export default function (
 				}),
 				body: z.object({
 					url: z.string().url(),
+					keepSynced: z.boolean(),
 				}),
 			},
 		},
@@ -348,22 +498,89 @@ export default function (
 				},
 			);
 
-			const schedule = await schedules.create({
-				task: scheduledTask.id,
-				externalId: `monitor-youtube-channel-${persona.id}-${channel.id}`,
-				cron: "0 */5 * * *",
-				timezone: "America/Sao_Paulo",
-				deduplicationKey: `monitor-youtube-channel-${persona.id}-${channel.id}`,
-			});
+			if (request.body.keepSynced) {
+				const schedule = await schedules.create({
+					task: scheduledTask.id,
+					externalId: `monitor-youtube-channel-${persona.id}-${channel.id}`,
+					cron: "0 */5 * * *",
+					timezone: "America/Sao_Paulo",
+					deduplicationKey: `monitor-youtube-channel-${persona.id}-${channel.id}`,
+				});
 
-			await fastify.db
-				.update(youtubeChannels)
-				.set({
-					triggerId: schedule.id,
-				})
-				.where(eq(youtubeChannels.id, channel.id));
+				await fastify.db
+					.update(youtubeChannels)
+					.set({
+						triggerId: schedule.id,
+					})
+					.where(eq(youtubeChannels.id, channel.id));
+			}
 
 			reply.send({ data: channel });
+		},
+	);
+
+	fastify.patch<{
+		Params: { slug: string; id: string };
+		Body: { enabled: boolean };
+	}>(
+		"/assets/:id",
+		{
+			schema: {
+				params: PersonaBySlugSchema.extend({
+					id: z.string(),
+				}),
+				body: z.object({
+					enabled: z.boolean(),
+				}),
+			},
+		},
+		async (request, reply) => {
+			if (!request.user) {
+				return reply.unauthorized();
+			}
+
+			const [persona] = await fastify.db
+				.select()
+				.from(personas)
+				.where(
+					and(
+						eq(personas.slug, request.params.slug),
+						isNull(personas.deletedAt),
+					),
+				);
+
+			if (!persona) {
+				return reply.callNotFound();
+			}
+
+			const [organizationMember] = await fastify.db
+				.select()
+				.from(members)
+				.where(
+					and(
+						eq(members.organizationId, persona.organization),
+						eq(members.userId, request.user!.id),
+					),
+				);
+
+			if (!organizationMember) {
+				return reply.forbidden();
+			}
+
+			const updatedAsset = await fastify.db
+				.update(trainingAssets)
+				.set(request.body)
+				.where(and(eq(trainingAssets.id, request.params.id)))
+				.returning()
+				.then(([res]) => res);
+
+			if (!updatedAsset) {
+				return reply.callNotFound();
+			}
+
+			reply.send({
+				data: updatedAsset,
+			});
 		},
 	);
 

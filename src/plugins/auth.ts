@@ -21,7 +21,7 @@ const authPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 				},
 			},
 		},
-		trustedOrigins: ["localhost", "localhost:3000", "*"],
+		trustedOrigins: ["localhost", "localhost:3000", "http://localhost:3000"],
 		emailAndPassword: {
 			enabled: true,
 			minPasswordLength: 8,

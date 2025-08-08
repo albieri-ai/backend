@@ -1,15 +1,28 @@
-import { and, desc, isNull, eq } from "drizzle-orm";
+import { and, desc, isNull, eq, count } from "drizzle-orm";
 import type { FastifyInstance, FastifyServerOptions } from "fastify";
 import { personas, threads } from "../../../database/schema";
-import type { PersonaBySlugSchema } from "./";
-import type { z } from "zod";
+import { PersonaBySlugSchema } from "./";
+import { z } from "zod";
+
+const ListThreadsSchema = z.object({
+	page: z.number().int().default(1),
+	limit: z.number().int().default(10),
+});
 
 export default function (
 	fastify: FastifyInstance,
 	_opts: FastifyServerOptions,
 ) {
-	fastify.get<{ Params: z.infer<typeof PersonaBySlugSchema> }>(
+	fastify.get<{
+		Params: z.infer<typeof PersonaBySlugSchema>;
+		Querystring: z.infer<typeof ListThreadsSchema>;
+	}>(
 		"/threads",
+		{
+			schema: {
+				querystring: ListThreadsSchema,
+			},
+		},
 		async (request, reply) => {
 			if (!request.user) {
 				return reply.unauthorized();
@@ -46,10 +59,43 @@ export default function (
 						eq(threads.persona, persona.id),
 						isNull(threads.deletedAt),
 					),
+				limit: request.query.limit,
+				offset: request.query.limit * (request.query.page - 1),
 				orderBy: desc(threads.updatedAt),
 			});
 
-			reply.send({ data: userThreads });
+			const userThreadCount = await fastify.db
+				.select({ count: count().as("count") })
+				.from(threads)
+				.where(
+					and(
+						eq(threads.author, request.user!.id),
+						eq(threads.persona, persona.id),
+						isNull(threads.deletedAt),
+					),
+				)
+				.then(([res]) => res.count || 0);
+
+			const hasNextPage =
+				userThreadCount > request.query.limit * request.query.page;
+			const previousPage = Math.min(
+				request.query.page - 1,
+				Math.ceil(userThreadCount / request.query.limit),
+			);
+			const hasPreviousPage =
+				previousPage > 0 && previousPage < request.query.page;
+
+			reply.send({
+				data: userThreads,
+				pagination: {
+					totalRecords: userThreadCount,
+					totalPages: Math.ceil(userThreadCount / request.query.limit),
+					currentPage: request.query.page,
+					pageSize: request.query.limit,
+					nextPage: hasNextPage ? request.query.page + 1 : null,
+					previousPage: hasPreviousPage,
+				},
+			});
 		},
 	);
 

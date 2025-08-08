@@ -1,6 +1,6 @@
 {
-  "id": "a4693fb0-b463-4fd8-b915-bc1df6341e88",
-  "prevId": "7e3bdd1c-eb89-4b08-a008-b72a1560b3f5",
+  "id": "43697d50-381c-4cbf-bc16-edc0faf2f55f",
+  "prevId": "a4693fb0-b463-4fd8-b915-bc1df6341e88",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -737,6 +737,12 @@
         },
         "description": {
           "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "objective": {
+          "name": "objective",
           "type": "text",
           "primaryKey": false,
           "notNull": false

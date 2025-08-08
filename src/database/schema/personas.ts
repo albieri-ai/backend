@@ -37,6 +37,7 @@ export const personas = pgTable(
 			.references(() => files.id, { onDelete: "set null" }),
 		title: text(),
 		description: text(),
+		objective: text(),
 
 		createdBy: text()
 			.notNull()

@@ -29,7 +29,7 @@ async function createServer() {
 	);
 
 	server.register(require("@fastify/cors"), {
-		origin: ["http://localhost:3000", "*"],
+		origin: ["http://localhost:3000"],
 		methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
 		credentials: true,
 		maxAge: 86400,

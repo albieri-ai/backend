@@ -40,8 +40,22 @@
     {
       "idx": 5,
       "version": "7",
-      "when": 1754241378051,
-      "tag": "0005_lively_jack_power",
+      "when": 1754318659507,
+      "tag": "0005_nice_living_tribunal",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1754601442111,
+      "tag": "0006_neat_vivisector",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1754614874367,
+      "tag": "0007_exotic_galactus",
       "breakpoints": true
     }
   ]

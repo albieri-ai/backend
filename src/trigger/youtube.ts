@@ -148,17 +148,8 @@ export const MonitorYoutubeChannel = task({
 					return acc;
 				}, {});
 
-				await trx
-					.update(youtubeVideoAssets)
-					.set({
-						channelVideo: payload.channelID,
-					})
-					.where(
-						inArray(
-							youtubeVideoAssets.id,
-							Object.values(videosAlreadyAddedMap),
-						),
-					);
+				const previousUploadedVideosWithoutChannelId =
+					videosAlreadyAdded.filter((v) => !v.channelVideo);
 
 				const newVideos = insertedRecords.filter(
 					(i) => !videosAlreadyAddedMap[i.videoId],
@@ -177,17 +168,37 @@ export const MonitorYoutubeChannel = task({
 					)
 					.returning();
 
+				const channelVideoIdMap = insertedRecords.reduce<
+					Record<string, number>
+				>((acc, vid) => {
+					acc[vid.videoId] = vid.id;
+
+					return acc;
+				}, {});
+
 				const videoRecords = await trx
 					.insert(youtubeVideoAssets)
 					.values(
 						newVideos.map((v, index) => ({
 							asset: assets[index].id,
 							url: `https://www.youtube.com/watch?v=${v.videoId}`,
+							title: v.title || "Título não disponível",
 							videoId: v.videoId,
-							channelVideo: payload.channelID,
+							channelVideo: channelVideoIdMap[v.videoId],
 						})),
 					)
 					.returning();
+
+				if (previousUploadedVideosWithoutChannelId.length) {
+					for (const vid of previousUploadedVideosWithoutChannelId) {
+						await trx
+							.update(youtubeVideoAssets)
+							.set({
+								channelVideo: channelVideoIdMap[vid.videoId],
+							})
+							.where(eq(youtubeVideoAssets.id, vid.id));
+					}
+				}
 
 				return videoRecords;
 			});

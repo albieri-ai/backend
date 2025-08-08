@@ -11,10 +11,11 @@ import { and, isNull, eq, getTableColumns, notInArray } from "drizzle-orm";
 
 export const PersonaCreateSchema = z.object({
 	name: z.string().min(3).max(64),
-	slug: z.string().min(3).max(64),
+	slug: z.string().min(3).max(32),
 	photo: z.string(),
 	title: z.string().min(3).max(64).optional(),
 	description: z.string().optional(),
+	objective: z.string().optional(),
 });
 
 export default function (
