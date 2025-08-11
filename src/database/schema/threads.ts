@@ -53,4 +53,8 @@ export const threadRelations = relations(threads, ({ one }) => ({
 		fields: [threads.author],
 		references: [users.id],
 	}),
+	persona: one(personas, {
+		fields: [threads.persona],
+		references: [personas.id],
+	}),
 }));

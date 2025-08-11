@@ -101,6 +101,9 @@ importers:
       cpf-cnpj-validator:
         specifier: ^1.0.3
         version: 1.0.3
+      date-fns:
+        specifier: ^4.1.0
+        version: 4.1.0
       dotenv:
         specifier: ^17.2.0
         version: 17.2.0
@@ -128,6 +131,9 @@ importers:
       json-schema-to-typescript:
         specifier: ^15.0.4
         version: 15.0.4
+      lodash:
+        specifier: ^4.17.21
+        version: 4.17.21
       mime-types:
         specifier: ^3.0.1
         version: 3.0.1
@@ -159,6 +165,9 @@ importers:
       '@trigger.dev/build':
         specifier: ^3.3.17
         version: 3.3.17(typescript@5.8.3)
+      '@types/lodash':
+        specifier: ^4.17.20
+        version: 4.17.20
       '@types/node':
         specifier: ^24.0.14
         version: 24.0.14
@@ -2032,6 +2041,9 @@ packages:
   data-uri-to-buffer@4.0.1:
     resolution: {integrity: sha512-0R9ikRb668HB7QDxT1vkpuUBtqc53YyAwMwGeUFKRojY/NWKvdZ+9UYtRfGmhqNbRkTSVpMbmyhXipFFv2cb/A==}
     engines: {node: '>= 12'}
+
+  date-fns@4.1.0:
+    resolution: {integrity: sha512-Ukq0owbQXxa/U3EGtsdVBkR1w7KOQ5gIBqdH2hkvknzZPYvBxb/aa6E8L7tmjFtkwZBu3UXBbjIgPo/Ez4xaNg==}
 
   dateformat@4.6.3:
     resolution: {integrity: sha512-2P0p0pFGzHS5EMnhdxQi7aJN+iMheud0UhG4dlE1DLAlvL8JHjJJTX/CSm4JXwV0Ka5nGk3zC5mcb5bUQUxxMA==}
@@ -5692,6 +5704,8 @@ snapshots:
 
   data-uri-to-buffer@4.0.1:
     optional: true
+
+  date-fns@4.1.0: {}
 
   dateformat@4.6.3: {}
 

@@ -9,7 +9,6 @@ import {
 	youtubeVideoAssets,
 	fileAssets,
 	files,
-	members,
 	webPageAssets,
 } from "../../../../database/schema";
 import { personas } from "../../../../database/schema";
@@ -22,6 +21,7 @@ import { MonitorYoutubeChannel } from "../../../../trigger/youtube";
 import { schedules } from "@trigger.dev/sdk/v3";
 import axios from "axios";
 import { PersonaBySlugSchema } from "..";
+import { adminOnly } from "../../../../lib/adminOnly";
 
 function extractYouTubeVideoId(urlString: string): string | null {
 	try {
@@ -91,6 +91,7 @@ export default function (
 			schema: {
 				querystring: ListAssetSchema,
 			},
+			preHandler: [adminOnly(fastify)],
 		},
 		async (request, reply) => {
 			if (!request.user) {
@@ -106,24 +107,6 @@ export default function (
 						isNull(personas.deletedAt),
 					),
 				);
-
-			if (!persona) {
-				return reply.callNotFound();
-			}
-
-			const [organizationMember] = await fastify.db
-				.select()
-				.from(members)
-				.where(
-					and(
-						eq(members.organizationId, persona.organization),
-						eq(members.userId, request.user!.id),
-					),
-				);
-
-			if (!organizationMember) {
-				return reply.forbidden();
-			}
 
 			const assetCount = await fastify.db
 				.select({ count: count().as("count") })
@@ -200,12 +183,9 @@ export default function (
 					url: z.string().url(),
 				}),
 			},
+			preHandler: [adminOnly(fastify)],
 		},
 		async (request, reply) => {
-			if (!request.user) {
-				return reply.unauthorized();
-			}
-
 			const [persona] = await fastify.db
 				.select()
 				.from(personas)
@@ -215,24 +195,6 @@ export default function (
 						isNull(personas.deletedAt),
 					),
 				);
-
-			if (!persona) {
-				return reply.callNotFound();
-			}
-
-			const [organizationMember] = await fastify.db
-				.select()
-				.from(members)
-				.where(
-					and(
-						eq(members.organizationId, persona.organization),
-						eq(members.userId, request.user!.id),
-					),
-				);
-
-			if (!organizationMember) {
-				return reply.forbidden();
-			}
 
 			const asset = await fastify.db.transaction(async (trx) => {
 				const asset = await trx
@@ -289,12 +251,9 @@ export default function (
 					fileId: z.string(),
 				}),
 			},
+			preHandler: [adminOnly(fastify)],
 		},
 		async (request, reply) => {
-			if (!request.user) {
-				return reply.unauthorized();
-			}
-
 			const [persona] = await fastify.db
 				.select()
 				.from(personas)
@@ -304,24 +263,6 @@ export default function (
 						isNull(personas.deletedAt),
 					),
 				);
-
-			if (!persona) {
-				return reply.callNotFound();
-			}
-
-			const [organizationMember] = await fastify.db
-				.select()
-				.from(members)
-				.where(
-					and(
-						eq(members.organizationId, persona.organization),
-						eq(members.userId, request.user!.id),
-					),
-				);
-
-			if (!organizationMember) {
-				return reply.forbidden();
-			}
 
 			const asset = await fastify.db.transaction(async (trx) => {
 				const file = await fastify.db
@@ -381,11 +322,10 @@ export default function (
 
 	fastify.get<{ Params: { slug: string } }>(
 		"/accounts/youtube",
+		{
+			preHandler: [adminOnly(fastify)],
+		},
 		async (request, reply) => {
-			if (!request.user) {
-				return reply.unauthorized();
-			}
-
 			const [persona] = await fastify.db
 				.select()
 				.from(personas)
@@ -395,24 +335,6 @@ export default function (
 						isNull(personas.deletedAt),
 					),
 				);
-
-			if (!persona) {
-				return reply.callNotFound();
-			}
-
-			const [organizationMember] = await fastify.db
-				.select()
-				.from(members)
-				.where(
-					and(
-						eq(members.organizationId, persona.organization),
-						eq(members.userId, request.user!.id),
-					),
-				);
-
-			if (!organizationMember) {
-				return reply.forbidden();
-			}
 
 			const channels = await fastify.db
 				.select()
@@ -443,12 +365,9 @@ export default function (
 					keepSynced: z.boolean(),
 				}),
 			},
+			preHandler: [adminOnly(fastify)],
 		},
 		async (request, reply) => {
-			if (!request.user) {
-				return reply.unauthorized();
-			}
-
 			const [persona] = await fastify.db
 				.select()
 				.from(personas)
@@ -458,24 +377,6 @@ export default function (
 						isNull(personas.deletedAt),
 					),
 				);
-
-			if (!persona) {
-				return reply.callNotFound();
-			}
-
-			const [organizationMember] = await fastify.db
-				.select()
-				.from(members)
-				.where(
-					and(
-						eq(members.organizationId, persona.organization),
-						eq(members.userId, request.user!.id),
-					),
-				);
-
-			if (!organizationMember) {
-				return reply.forbidden();
-			}
 
 			const [channel] = await fastify.db
 				.insert(youtubeChannels)
@@ -533,40 +434,9 @@ export default function (
 					enabled: z.boolean(),
 				}),
 			},
+			preHandler: [adminOnly(fastify)],
 		},
 		async (request, reply) => {
-			if (!request.user) {
-				return reply.unauthorized();
-			}
-
-			const [persona] = await fastify.db
-				.select()
-				.from(personas)
-				.where(
-					and(
-						eq(personas.slug, request.params.slug),
-						isNull(personas.deletedAt),
-					),
-				);
-
-			if (!persona) {
-				return reply.callNotFound();
-			}
-
-			const [organizationMember] = await fastify.db
-				.select()
-				.from(members)
-				.where(
-					and(
-						eq(members.organizationId, persona.organization),
-						eq(members.userId, request.user!.id),
-					),
-				);
-
-			if (!organizationMember) {
-				return reply.forbidden();
-			}
-
 			const updatedAsset = await fastify.db
 				.update(trainingAssets)
 				.set(request.body)
@@ -598,6 +468,7 @@ export default function (
 					accountId: z.string(),
 				}),
 			},
+			preHandler: [adminOnly(fastify)],
 		},
 		async (request, reply) => {
 			if (!request.user) {
@@ -613,24 +484,6 @@ export default function (
 						isNull(personas.deletedAt),
 					),
 				);
-
-			if (!persona) {
-				return reply.callNotFound();
-			}
-
-			const [organizationMember] = await fastify.db
-				.select()
-				.from(members)
-				.where(
-					and(
-						eq(members.organizationId, persona.organization),
-						eq(members.userId, request.user!.id),
-					),
-				);
-
-			if (!organizationMember) {
-				return reply.forbidden();
-			}
 
 			const channel = await fastify.db
 				.select()

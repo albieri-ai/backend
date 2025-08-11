@@ -12,7 +12,9 @@ import {
 	serializerCompiler,
 	validatorCompiler,
 } from "fastify-type-provider-zod";
-import { Axios, AxiosInstance } from "axios";
+import type { AxiosInstance } from "axios";
+import type { InferSelectModel } from "drizzle-orm";
+import type { personas } from "./database/schema";
 
 async function createServer() {
 	const server = fastify({
@@ -137,5 +139,6 @@ declare module "fastify" {
 	interface FastifyRequest {
 		session?: Session;
 		user?: User;
+		persona?: InferSelectModel<typeof personas>;
 	}
 }

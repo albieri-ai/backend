@@ -1,6 +1,5 @@
 import type { FastifyInstance, FastifyServerOptions } from "fastify";
 import {
-	members,
 	organizations,
 	personas,
 	personaTopics,
@@ -9,6 +8,7 @@ import {
 import { z } from "zod";
 import { and, isNull, eq, notInArray } from "drizzle-orm";
 import { PersonaCreateSchema } from "../index";
+import { adminOnly } from "../../../lib/adminOnly";
 
 export const PersonaBySlugSchema = z.object({
 	slug: z.string(),
@@ -100,31 +100,9 @@ export default function (
 				params: PersonaBySlugSchema,
 				body: PersonaUpdateSchema,
 			},
+			preHandler: [adminOnly(fastify)],
 		},
 		async (request, reply) => {
-			if (!request.user) {
-				return reply.unauthorized();
-			}
-
-			const isMember = await fastify.db
-				.select({
-					id: members.id,
-				})
-				.from(members)
-				.leftJoin(organizations, eq(organizations.id, members.organizationId))
-				.leftJoin(personas, eq(personas.organization, organizations.id))
-				.where(
-					and(
-						eq(personas.slug, request.params.slug),
-						isNull(personas.deletedAt),
-					),
-				)
-				.then((res) => res.length > 0);
-
-			if (!isMember) {
-				return reply.forbidden();
-			}
-
 			await fastify.db.transaction(async (trx) => {
 				await trx
 					.update(personas)
@@ -162,12 +140,9 @@ export default function (
 				}),
 				params: PersonaBySlugSchema,
 			},
+			preHandler: [adminOnly(fastify)],
 		},
 		async (request, reply) => {
-			if (!request.user) {
-				return reply.unauthorized();
-			}
-
 			const updatedTopics = await fastify.db.transaction(async (trx) => {
 				const [persona] = await trx
 					.select({ id: personas.id, organization: personas.organization })
@@ -181,20 +156,6 @@ export default function (
 
 				if (!persona) {
 					return reply.callNotFound();
-				}
-
-				const [organizationMember] = await fastify.db
-					.select()
-					.from(members)
-					.where(
-						and(
-							eq(members.organizationId, persona.organization),
-							eq(members.userId, request.user!.id),
-						),
-					);
-
-				if (!organizationMember) {
-					return reply.forbidden();
 				}
 
 				await trx

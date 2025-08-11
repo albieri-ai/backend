@@ -1,6 +1,6 @@
 {
-	"id": "43697d50-381c-4cbf-bc16-edc0faf2f55f",
-	"prevId": "a4693fb0-b463-4fd8-b915-bc1df6341e88",
+	"id": "c76683a7-a287-444f-b92e-ce84b8ca46d6",
+	"prevId": "311d3a81-2ef0-4d95-bd57-ef6f3bdb6e40",
 	"version": "7",
 	"dialect": "postgresql",
 	"tables": {
@@ -560,6 +560,25 @@
 					"type": "timestamp",
 					"primaryKey": false,
 					"notNull": false
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"public.calendar_days": {
+			"name": "calendar_days",
+			"schema": "",
+			"columns": {
+				"date": {
+					"name": "date",
+					"type": "date",
+					"primaryKey": true,
+					"notNull": true
 				}
 			},
 			"indexes": {},
@@ -1459,6 +1478,12 @@
 					"primaryKey": false,
 					"notNull": true
 				},
+				"title": {
+					"name": "title",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
 				"url": {
 					"name": "url",
 					"type": "text",
@@ -1527,6 +1552,13 @@
 					"type": "text",
 					"primaryKey": false,
 					"notNull": true
+				},
+				"title": {
+					"name": "title",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'Título não disponível'"
 				},
 				"channel_video": {
 					"name": "channel_video",
@@ -1769,14 +1801,41 @@
 		"public.training_asset_type": {
 			"name": "training_asset_type",
 			"schema": "public",
-			"values": ["file", "youtube_video", "webpage"]
+			"values": ["file", "video_file", "youtube_video", "webpage", "hotmart"]
 		}
 	},
 	"schemas": {},
 	"sequences": {},
 	"roles": {},
 	"policies": {},
-	"views": {},
+	"views": {
+		"public.user_messages": {
+			"columns": {
+				"author": {
+					"name": "author",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"persona": {
+					"name": "persona",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"date": {
+					"name": "date",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": false
+				}
+			},
+			"name": "user_messages",
+			"schema": "public",
+			"isExisting": true,
+			"materialized": false
+		}
+	},
 	"_meta": {
 		"columns": {},
 		"schemas": {},

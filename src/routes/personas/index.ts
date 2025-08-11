@@ -26,8 +26,16 @@ export default function (
 		const persona = await fastify.db.query.personas.findFirst({
 			columns: {
 				photo: false,
+				organization: false,
 			},
 			with: {
+				organization: {
+					columns: {
+						id: true,
+						name: true,
+						slug: true,
+					},
+				},
 				photo: {
 					columns: {
 						id: true,
