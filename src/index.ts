@@ -131,7 +131,6 @@ declare module "fastify" {
 		db: NodePgDatabase<typeof schema> & { $client: pg.Client };
 		auth: typeof auth;
 		s3: S3Client;
-		payment: AxiosInstance;
 		ai: {
 			providers: {
 				gemini: ReturnType<typeof createGoogleGenerativeAI>;
