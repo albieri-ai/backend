@@ -56,8 +56,6 @@ async function createServer() {
 				"GEMINI_API_KEY",
 				"GROQ_API_KEY",
 				"OPENAI_API_KEY",
-				"PAGARME_API_KEY",
-				"STRIPE_SECRET_KEY",
 			],
 			properties: {
 				PORT: {
@@ -92,12 +90,6 @@ async function createServer() {
 					type: "string",
 				},
 				OPENAI_API_KEY: {
-					type: "string",
-				},
-				PAGARME_API_KEY: {
-					type: "string",
-				},
-				STRIPE_SECRET_KEY: {
 					type: "string",
 				},
 			},
@@ -135,8 +127,6 @@ declare module "fastify" {
 			GEMINI_API_KEY: string;
 			GROQ_API_KEY: string;
 			OPENAI_API_KEY: string;
-			PAGARME_API_KEY: string;
-			STRIPE_SECRET_KEY: string;
 		};
 		db: NodePgDatabase<typeof schema> & { $client: pg.Client };
 		auth: typeof auth;
