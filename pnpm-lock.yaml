@@ -149,6 +149,9 @@ importers:
       pino-pretty:
         specifier: ^13.0.0
         version: 13.0.0
+      resend:
+        specifier: ^6.0.1
+        version: 6.0.1
       stripe:
         specifier: ^18.4.0
         version: 18.4.0(@types/node@24.0.14)
@@ -3230,6 +3233,15 @@ packages:
 
   requires-port@1.0.0:
     resolution: {integrity: sha512-KigOCHcocU3XODJxsu8i/j8T9tzT4adHiecwORRQ0ZZFcp7ahwXuRU1m+yuO90C5ZUyGeGfocHDI14M3L3yDAQ==}
+
+  resend@6.0.1:
+    resolution: {integrity: sha512-xNZ0gKAOqQcH83lXsqNOwBbpKROnsZpQr9mXRdG6hrHTF9G9Il2pkoTRtq7rJzXMvCZX+I79oahsbSeaYOWRFA==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      '@react-email/render': ^1.1.0
+    peerDependenciesMeta:
+      '@react-email/render':
+        optional: true
 
   resolve-pkg-maps@1.0.0:
     resolution: {integrity: sha512-seS2Tj26TBVOC2NIc2rOe2y2ZO7efxITtLZcGSOnHHNOQ7CkiUBfw0Iw2ck6xkIhPwLhKNLS8BO+hEpngQlqzw==}
@@ -6878,6 +6890,8 @@ snapshots:
       - supports-color
 
   requires-port@1.0.0: {}
+
+  resend@6.0.1: {}
 
   resolve-pkg-maps@1.0.0: {}
 

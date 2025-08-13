@@ -13,9 +13,9 @@ import {
 } from "drizzle-orm/pg-core";
 import { personas } from "./personas";
 import { users } from "./auth";
-import { generateId } from "better-auth";
 import { files } from "./storage";
 import { youtubeChannelsVideos } from "./youtube";
+import { createId } from "@paralleldrive/cuid2";
 
 export const TrainingAssetType = pgEnum("training_asset_type", [
 	"file",
@@ -36,7 +36,7 @@ export const trainingAssets = pgTable(
 	{
 		id: text()
 			.primaryKey()
-			.$default(() => generateId()),
+			.$default(() => createId()),
 		type: TrainingAssetType("asset_type").notNull(),
 		status: TrainingAssetStatus("status").notNull().default("pending"),
 		enabled: boolean().notNull().default(false),

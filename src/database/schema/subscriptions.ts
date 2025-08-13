@@ -1,6 +1,6 @@
 import { pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
-import { generateId } from "better-auth";
 import { organizations } from "./auth";
+import { createId } from "@paralleldrive/cuid2";
 
 export const plans = pgTable("plans", {
 	id: serial().primaryKey(),
@@ -9,7 +9,7 @@ export const plans = pgTable("plans", {
 export const subscriptions = pgTable("subscriptions", {
 	id: text()
 		.primaryKey()
-		.$default(() => generateId()),
+		.$default(() => createId()),
 	organization: text()
 		.notNull()
 		.references(() => organizations.id, { onDelete: "cascade" }),

@@ -1,14 +1,13 @@
 import type { FastifyInstance, FastifyServerOptions } from "fastify";
 import {
 	appendResponseMessages,
+	embed,
 	generateText,
 	streamText,
 	type UIMessage,
 } from "ai";
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { threads } from "../../../../database/schema";
-import { eq, and, sql, isNull, count } from "drizzle-orm";
-import { createGroq } from "@ai-sdk/groq";
+import { eq, and, sql, isNull, count, ilike } from "drizzle-orm";
 import { personaLoader } from "../../../../lib/personaLoader";
 import { z } from "zod";
 
@@ -16,13 +15,6 @@ export default function (
 	fastify: FastifyInstance,
 	_opts: FastifyServerOptions,
 ) {
-	const googleProvider = createGoogleGenerativeAI({
-		apiKey: fastify.config.GEMINI_API_KEY,
-	});
-	const groqProvider = createGroq({
-		apiKey: fastify.config.GROQ_API_KEY,
-	});
-
 	fastify.get<{
 		Querystring: { page: number; limit: number; query?: string };
 		Params: { slug: string };
@@ -55,7 +47,7 @@ export default function (
 			if (request.query.query) {
 				baseQuery = and(
 					baseQuery,
-					sql`${threads.title} ILIKE ${"%" + request.query.query + "%"}`,
+					ilike(threads.title, "%" + request.query.query + "%"),
 				);
 			}
 
@@ -198,7 +190,7 @@ export default function (
 
 			if (!chat) {
 				const { text: title } = await generateText({
-					model: groqProvider("llama-3.1-8b-instant"),
+					model: fastify.ai.providers.groq("llama-3.1-8b-instant"),
 					system: `\n
         - você gerará um título curto com base na primeira mensagem com a qual o usuário inicia a conversa
         - certifique-se de que não tenha mais de 80 caracteres
@@ -218,17 +210,30 @@ export default function (
 			}
 
 			const result = streamText({
-				model: googleProvider("gemini-2.5-flash"),
+				model: fastify.ai.providers.gemini("gemini-2.0-flash"),
 				messages: request.body.messages,
-				// tools: {
-				// 	retrieve_content: {
-				// 		description: "",
-				// 		parameters: z.object({ query: z.string() }),
-				// 		execute: ({ query }) => {
-				// 			return null;
-				// 		},
-				// 	},
-				// },
+				tools: {
+					retrieve_content: {
+						description:
+							"Retrieves a set of content related to the query. Use this to search for relevant information.",
+						parameters: z.object({ query: z.string() }),
+						execute: async ({ query }) => {
+							const { embedding: queryEmbed } = await embed({
+								model: fastify.ai.providers.openai.embedding(
+									"text-embedding-3-small",
+								),
+								value: query,
+							});
+
+							const context = await fastify.ai.handlers.retrieveContent(
+								request.persona!.id,
+								queryEmbed,
+							);
+
+							return context.map((c) => ({ content: c.chunk }));
+						},
+					},
+				},
 				onFinish: async (message) => {
 					const finalMessages = appendResponseMessages({
 						messages: request.body.messages as UIMessage[],

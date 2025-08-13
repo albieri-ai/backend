@@ -21,6 +21,11 @@ export const auth = betterAuth({
 				type: "string",
 				required: false,
 			},
+			avatarId: {
+				type: "string",
+				fieldName: "avatar_id",
+				required: false,
+			},
 		},
 	},
 	emailAndPassword: {

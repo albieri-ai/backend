@@ -7,17 +7,17 @@ import {
 	index,
 } from "drizzle-orm/pg-core";
 import { users } from "./auth";
-import { generateId } from "better-auth";
 import { personas } from "./personas";
 import { desc, relations } from "drizzle-orm";
 import type { Message } from "ai";
+import { createId } from "@paralleldrive/cuid2";
 
 export const threads = pgTable(
 	"threads",
 	{
 		id: text()
 			.primaryKey()
-			.$default(() => generateId()),
+			.$default(() => createId()),
 		persona: text()
 			.notNull()
 			.references(() => personas.id, { onDelete: "cascade" }),

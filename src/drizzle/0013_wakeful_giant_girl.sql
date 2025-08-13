@@ -1,0 +1,1 @@
+ALTER TABLE "youtube_channels" ADD COLUMN "keep_synced" boolean DEFAULT false NOT NULL;

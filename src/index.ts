@@ -15,6 +15,9 @@ import {
 import type { AxiosInstance } from "axios";
 import type { InferSelectModel } from "drizzle-orm";
 import type { personas } from "./database/schema";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { createGroq } from "@ai-sdk/groq";
+import { createOpenAI } from "@ai-sdk/openai";
 
 async function createServer() {
 	const server = fastify({
@@ -54,6 +57,7 @@ async function createServer() {
 				"GROQ_API_KEY",
 				"OPENAI_API_KEY",
 				"PAGARME_API_KEY",
+				"STRIPE_SECRET_KEY",
 			],
 			properties: {
 				PORT: {
@@ -93,6 +97,9 @@ async function createServer() {
 				PAGARME_API_KEY: {
 					type: "string",
 				},
+				STRIPE_SECRET_KEY: {
+					type: "string",
+				},
 			},
 		},
 	});
@@ -129,11 +136,27 @@ declare module "fastify" {
 			GROQ_API_KEY: string;
 			OPENAI_API_KEY: string;
 			PAGARME_API_KEY: string;
+			STRIPE_SECRET_KEY: string;
 		};
 		db: NodePgDatabase<typeof schema> & { $client: pg.Client };
 		auth: typeof auth;
 		s3: S3Client;
 		payment: AxiosInstance;
+		ai: {
+			providers: {
+				gemini: ReturnType<typeof createGoogleGenerativeAI>;
+				groq: ReturnType<typeof createGroq>;
+				openai: ReturnType<typeof createOpenAI>;
+			};
+			handlers: {
+				retrieveContent: (
+					persona: string,
+					embed: number[],
+				) => Promise<
+					{ asset: string; summary: string | null; chunk: string }[]
+				>;
+			};
+		};
 	}
 
 	interface FastifyRequest {

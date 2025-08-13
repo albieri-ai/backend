@@ -12,7 +12,7 @@ import {
 	webPageAssets,
 } from "../../../../database/schema";
 import { personas } from "../../../../database/schema";
-import { and, isNull, eq, sql, count, asc, desc } from "drizzle-orm";
+import { and, isNull, eq, sql, count, asc, desc, ilike } from "drizzle-orm";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { z } from "zod";
@@ -65,6 +65,7 @@ function extractYouTubeVideoId(urlString: string): string | null {
 const ListAssetSchema = z.object({
 	page: z.coerce.number().int().positive().default(1),
 	limit: z.coerce.number().int().positive().default(10),
+	query: z.string().optional(),
 	orderBy: z
 		.enum([
 			"name:asc",
@@ -98,22 +99,6 @@ export default function (
 				return reply.unauthorized();
 			}
 
-			const [persona] = await fastify.db
-				.select()
-				.from(personas)
-				.where(
-					and(
-						eq(personas.slug, request.params.slug),
-						isNull(personas.deletedAt),
-					),
-				);
-
-			const assetCount = await fastify.db
-				.select({ count: count().as("count") })
-				.from(trainingAssets)
-				.where(eq(trainingAssets.persona, persona.id))
-				.then(([res]) => res.count || 0);
-
 			const assetList = fastify.db.$with("asset_list").as(
 				fastify.db
 					.select({
@@ -136,19 +121,54 @@ export default function (
 					.leftJoin(webPageAssets, eq(webPageAssets.asset, trainingAssets.id)),
 			);
 
-			const [field, operator] = request.query.orderBy.split(":");
+			let orderFn = [asc(assetList.name)];
 
-			const orderFn =
-				// @ts-expect-error filter is ok
-				operator === "asc" ? asc(assetList[field]) : desc(assetList[field]);
+			switch (request.query.orderBy) {
+				case "name:desc":
+					orderFn = [desc(assetList.name)];
+					break;
+				case "createdAt:asc":
+					orderFn = [asc(assetList.createdAt), asc(assetList.name)];
+					break;
+				case "createdAt:desc":
+					orderFn = [desc(assetList.createdAt), asc(assetList.name)];
+					break;
+				case "status:asc":
+					orderFn = [asc(assetList.status), asc(assetList.name)];
+					break;
+				case "status:desc":
+					orderFn = [desc(assetList.status), asc(assetList.name)];
+					break;
+				default:
+					orderFn = [asc(assetList.name)];
+					break;
+			}
 
-			const assets = await fastify.db
-				.with(assetList)
-				.select()
-				.from(assetList)
-				.orderBy(orderFn)
+			const query = request.query.query
+				? fastify.db
+						.with(assetList)
+						.select()
+						.from(assetList)
+						.where(ilike(assetList.name, `%${request.query.query}%`))
+				: fastify.db.with(assetList).select().from(assetList);
+
+			const assetCountQuery = request.query.query
+				? fastify.db
+						.with(assetList)
+						.select({ count: count().as("count") })
+						.from(assetList)
+						.where(ilike(assetList.name, `%${request.query.query}%`))
+				: fastify.db
+						.with(assetList)
+						.select({ count: count().as("count") })
+						.from(assetList);
+
+			const assets = await query
+				.orderBy(...orderFn)
 				.limit(request.query.limit)
 				.offset(request.query.limit * (request.query.page - 1));
+
+			const assetCount = await assetCountQuery.then((res) => res?.[0]?.count);
 
 			const hasNextPage = assetCount > request.query.limit * request.query.page;
 			const previousPage = Math.min(
@@ -383,6 +403,7 @@ export default function (
 				.values({
 					persona: persona.id,
 					url: request.body.url,
+					keepSynced: request.body.keepSynced,
 					createdBy: request.user!.id,
 				})
 				.returning();
@@ -451,6 +472,107 @@ export default function (
 			reply.send({
 				data: updatedAsset,
 			});
+		},
+	);
+
+	fastify.patch<{
+		Params: {
+			slug: string;
+			accountId: string;
+		};
+		Body: {
+			keepSynced: boolean;
+		};
+	}>(
+		"/accounts/youtube/:accountId",
+		{
+			schema: {
+				params: z.object({
+					slug: z.string(),
+					accountId: z.string(),
+				}),
+				body: z.object({
+					keepSynced: z.boolean(),
+				}),
+			},
+			preHandler: [adminOnly(fastify)],
+		},
+		async (request, reply) => {
+			if (!request.user) {
+				return reply.unauthorized();
+			}
+
+			const [persona] = await fastify.db
+				.select()
+				.from(personas)
+				.where(
+					and(
+						eq(personas.slug, request.params.slug),
+						isNull(personas.deletedAt),
+					),
+				);
+
+			const [updatedChannel] = await fastify.db
+				.update(youtubeChannels)
+				.set({
+					...request.body,
+				})
+				.where(
+					and(
+						eq(youtubeChannels.id, request.params.accountId),
+						eq(youtubeChannels.persona, persona.id),
+						isNull(youtubeChannels.disabledAt),
+					),
+				)
+				.returning();
+
+			if (!updatedChannel) {
+				return reply.callNotFound();
+			}
+
+			if (updatedChannel.keepSynced) {
+				const scheduledTask = await MonitorYoutubeChannel.trigger(
+					{
+						persona: persona.id,
+						channelID: updatedChannel.id,
+						url: updatedChannel.url,
+						createdBy: updatedChannel.createdBy,
+					},
+					{
+						idempotencyKey: `monitor-youtube-channel-${persona.id}-${updatedChannel.id}`,
+					},
+				);
+
+				if (request.body.keepSynced) {
+					const schedule = await schedules.create({
+						task: scheduledTask.id,
+						externalId: `monitor-youtube-channel-${persona.id}-${updatedChannel.id}`,
+						cron: "0 */5 * * *",
+						timezone: "America/Sao_Paulo",
+						deduplicationKey: `monitor-youtube-channel-${persona.id}-${updatedChannel.id}`,
+					});
+
+					await fastify.db
+						.update(youtubeChannels)
+						.set({
+							triggerId: schedule.id,
+						})
+						.where(eq(youtubeChannels.id, updatedChannel.id));
+				}
+			} else {
+				if (updatedChannel.triggerId) {
+					await schedules.deactivate(updatedChannel.triggerId!);
+
+					await fastify.db
+						.update(youtubeChannels)
+						.set({
+							triggerId: null,
+						})
+						.where(eq(youtubeChannels.id, updatedChannel.id));
+				}
+			}
+
+			return reply.status(204).send();
 		},
 	);
 

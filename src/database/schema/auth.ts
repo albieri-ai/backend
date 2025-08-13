@@ -1,10 +1,4 @@
-import {
-	pgTable,
-	text,
-	timestamp,
-	boolean,
-	integer,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
 	id: text("id").primaryKey(),
@@ -26,6 +20,7 @@ export const users = pgTable("users", {
 	banExpires: timestamp("ban_expires"),
 	isAnonymous: boolean("is_anonymous"),
 	whatsapp: text("whatsapp"),
+	avatarId: text("avatar_id"),
 });
 
 export const sessions = pgTable("sessions", {

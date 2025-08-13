@@ -49,42 +49,6 @@ export default function (
 	_opts: FastifyServerOptions,
 ) {
 	fastify.get<{ Params: z.infer<typeof GetFileByIdParamsSchema> }>(
-		"/files/:fileId/_url",
-		{
-			schema: {
-				params: GetFileByIdParamsSchema,
-			},
-		},
-		async (request, reply) => {
-			const [file] = await fastify.db
-				.select({
-					id: files.id,
-					name: files.originalName,
-					mimeType: files.mimeType,
-					visibility: files.visibility,
-					status: files.status,
-					size: files.size,
-					checksum: files.checksum,
-					createdBy: files.createdBy,
-					createdAt: files.createdAt,
-				})
-				.from(files)
-				.where(eq(files.id, request.params.fileId));
-
-			if (!file) {
-				return reply.callNotFound();
-			}
-
-			return reply.send({
-				data: {
-					...file,
-					url: `${fastify.config.BACKEND_URL}/storage/files/${files.id}/url`,
-				},
-			});
-		},
-	);
-
-	fastify.get<{ Params: z.infer<typeof GetFileByIdParamsSchema> }>(
 		"/files/:fileId/url",
 		{
 			schema: {

@@ -5,21 +5,23 @@ import {
 	timestamp,
 	uniqueIndex,
 	varchar,
+	boolean,
 } from "drizzle-orm/pg-core";
-import { generateId } from "better-auth";
 import { personas } from "./personas";
 import { users } from "./auth";
+import { createId } from "@paralleldrive/cuid2";
 
 export const youtubeChannels = pgTable(
 	"youtube_channels",
 	{
 		id: text()
 			.primaryKey()
-			.$default(() => generateId()),
+			.$default(() => createId()),
 		persona: text()
 			.notNull()
 			.references(() => personas.id, { onDelete: "cascade" }),
 		url: text().notNull(),
+		keepSynced: boolean().notNull().default(false),
 		triggerId: varchar(),
 		createdBy: text()
 			.notNull()
