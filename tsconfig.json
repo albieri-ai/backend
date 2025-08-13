@@ -2,12 +2,23 @@
 	"compilerOptions": {
 		"target": "es2017",
 		"module": "commonjs",
-		"rootDir": "./src",
+		"rootDir": "./",
 		"outDir": "./dist",
 		"esModuleInterop": true,
 		"forceConsistentCasingInFileNames": true,
 		"strict": true,
-		"skipLibCheck": true
+		"skipLibCheck": true,
+		"resolveJsonModule": true,
+		"declaration": false,
+		"sourceMap": false
 	},
-	"exclude": ["./drizzle.config.ts", "./trigger.config.ts"]
+	"include": ["src/**/*", "auth.ts"],
+	"exclude": [
+		"node_modules",
+		"dist",
+		"drizzle.config.ts",
+		"trigger.config.ts",
+		"**/*.test.ts",
+		"**/*.spec.ts"
+	]
 }
