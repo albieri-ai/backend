@@ -2,7 +2,7 @@ import { defineConfig } from "@trigger.dev/sdk/v3";
 import { ffmpeg } from "@trigger.dev/build/extensions/core";
 
 export default defineConfig({
-	project: "proj_uizzwombmfmewgglkqjt",
+	project: "proj_dwtdvdbggzyopcfplivg",
 	runtime: "node",
 	build: {
 		extensions: [ffmpeg()],
