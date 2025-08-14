@@ -4,6 +4,10 @@ export default function (
 	fastify: FastifyInstance,
 	_opts: FastifyServerOptions,
 ) {
+	fastify.get("/health", async (request, reply) => {
+		reply.status(200).send({ status: "ok" });
+	});
+
 	fastify.route({
 		method: ["GET", "POST"],
 		url: "/api/auth/*",
