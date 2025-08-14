@@ -4,7 +4,7 @@
 	"description": "",
 	"main": "index.js",
 	"scripts": {
-		"build": "tsc -p tsconfig.json",
+		"build": "npx tsc -p tsconfig.json && npx copyfiles -u 1 \"src/**/*.sql\" dist/src && npx copyfiles -u 1 \"src/**/*.json\" dist/src",
 		"start": "node dist/src/index.js",
 		"dev": "tsx watch ./src/index.ts",
 		"format": "biome format --write .",
@@ -77,6 +77,7 @@
 		"@types/lodash": "^4.17.20",
 		"@types/node": "^24.0.14",
 		"@types/pg": "^8.15.4",
+		"copyfiles": "^2.4.1",
 		"drizzle-kit": "^0.31.4",
 		"nodemon": "^3.1.10",
 		"tsc-alias": "^1.8.16",
