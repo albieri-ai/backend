@@ -1,5 +1,6 @@
 import fastify from "fastify";
 import AutoLoad from "@fastify/autoload";
+import cors from "@fastify/cors";
 import path from "node:path";
 import fastifyEnv from "@fastify/env";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
@@ -33,7 +34,7 @@ async function createServer() {
 		reply.status(error.statusCode || 500).send({ error: error.message }),
 	);
 
-	server.register(require("@fastify/cors"), {
+	server.register(cors, {
 		origin: ["http://localhost:3000"],
 		methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
 		credentials: true,
