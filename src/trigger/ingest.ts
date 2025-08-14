@@ -3,14 +3,13 @@ import { createDb } from "../database/db";
 import { YoutubeLoader } from "@langchain/community/document_loaders/web/youtube";
 import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
-import { embed, embedMany, generateText } from "ai";
+import { embed, embedMany, generateText, experimental_transcribe } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createGroq } from "@ai-sdk/groq";
 import { assetChunks, assetSummary, trainingAssets } from "../database/schema";
 import axios from "axios";
 import fs from "node:fs";
 import { createId } from "@paralleldrive/cuid2";
-import { extension, contentType } from "mime-types";
 import ffmpeg from "fluent-ffmpeg";
 import {
 	GetObjectCommand,
@@ -203,6 +202,13 @@ export const IngestVideoFile = task({
 		const fileName = `${createId()}.mp3`;
 		const outputPath = `/tmp/${fileName}`;
 
+		const openai = createOpenAI({
+			apiKey: process.env.OPENAI_API_KEY,
+		});
+		const groq = createGroq({
+			apiKey: process.env.GROQ_API_KEY,
+		});
+
 		const extractAudio = async () =>
 			new Promise((resolve, reject) => {
 				ffmpeg(payload.url)
@@ -248,37 +254,12 @@ export const IngestVideoFile = task({
 
 		logger.log("audio file uploaded");
 
-		const { data } = await axios.post<{
-			output: {
-				segments: {
-					end: number;
-					start: number;
-					text: string;
-				}[];
-			};
-		}>(
-			`https://api.runpod.ai/v2/jlda3bscesrmla/runsync`,
-			{
-				input: {
-					audio_file: url,
-					language: "pt",
-				},
-			},
-			{
-				headers: {
-					Authorization: `Bearer ${process.env.RUNPOD_API_KEY}`,
-				},
-			},
-		);
-
-		const fullText = data.output.segments.map((s) => s.text).join(" ");
-
-		const openai = createOpenAI({
-			apiKey: process.env.OPENAI_API_KEY,
+		const { segments } = await experimental_transcribe({
+			model: groq.transcription("whisper-large-v3-turbo"),
+			audio: url,
 		});
-		const groq = createGroq({
-			apiKey: process.env.GROQ_API_KEY,
-		});
+
+		const fullText = segments.map((s) => s.text).join(" ");
 
 		const { text: summary } = await generateText({
 			model: groq("llama-3.3-70b-versatile"),

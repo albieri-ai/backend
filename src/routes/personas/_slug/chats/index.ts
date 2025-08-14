@@ -205,7 +205,7 @@ export default function (
 					title,
 					author: request.user.id,
 					messages: request.body.messages,
-					model: "gemini-2.5-flash",
+					model: "gemini-2.0-flash",
 				});
 			}
 
