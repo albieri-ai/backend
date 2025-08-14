@@ -21,7 +21,7 @@ COPY . .
 RUN pnpm run build
 
 # Production stage
-FROM node:18-alpine AS production
+FROM node:22-alpine AS production
 
 # Install pnpm globally
 RUN npm install -g pnpm@10.4.1
