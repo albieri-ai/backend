@@ -26,8 +26,6 @@ export const files = pgTable("files", {
 	status: FileStatus().default("pending"),
 	size: integer(),
 	checksum: text(),
-	createdBy: text()
-		.references(() => users.id, { onDelete: "cascade" })
-		.notNull(),
+	createdBy: text().references(() => users.id, { onDelete: "cascade" }),
 	createdAt: timestamp().defaultNow(),
 });

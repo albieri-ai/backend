@@ -13,12 +13,11 @@ import {
 	serializerCompiler,
 	validatorCompiler,
 } from "fastify-type-provider-zod";
-import type { AxiosInstance } from "axios";
 import type { InferSelectModel } from "drizzle-orm";
 import type { personas } from "./database/schema";
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { createGroq } from "@ai-sdk/groq";
-import { createOpenAI } from "@ai-sdk/openai";
+import type { createGoogleGenerativeAI } from "@ai-sdk/google";
+import type { createGroq } from "@ai-sdk/groq";
+import type { createOpenAI } from "@ai-sdk/openai";
 
 async function createServer() {
 	const server = fastify({

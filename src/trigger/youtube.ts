@@ -19,7 +19,7 @@ export const MonitorYoutubeChannel = task({
 			url: string;
 			createdBy: string;
 		},
-		{ ctx },
+		// { ctx },
 	) => {
 		const channelUrl = new URL(payload.url);
 

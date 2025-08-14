@@ -1,15 +1,7 @@
 import type { FastifyInstance, FastifyServerOptions } from "fastify";
 import * as z from "zod";
-import mime from "mime-types";
-import {
-	CompleteMultipartUploadCommand,
-	CreateMultipartUploadCommand,
-	GetObjectCommand,
-	PutObjectCommand,
-	UploadPartCommand,
-} from "@aws-sdk/client-s3";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { createId } from "@paralleldrive/cuid2";
 import { files, users } from "../../database/schema";
 import { eq } from "drizzle-orm";
 

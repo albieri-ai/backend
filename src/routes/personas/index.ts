@@ -3,11 +3,10 @@ import {
 	members,
 	organizations,
 	personas,
-	personaTopics,
 	topics,
 } from "../../database/schema";
 import { z } from "zod";
-import { and, isNull, eq, getTableColumns, notInArray } from "drizzle-orm";
+import { and, isNull, eq, getTableColumns } from "drizzle-orm";
 
 export const PersonaCreateSchema = z.object({
 	name: z.string().min(3).max(64),

@@ -20,7 +20,7 @@ export const users = pgTable("users", {
 	banExpires: timestamp("ban_expires"),
 	isAnonymous: boolean("is_anonymous"),
 	whatsapp: text("whatsapp"),
-	avatarId: text("avatar_id"),
+	avatarId: text("avatar_id").$default(() => "hq0wwk2tpkkczlv8rv1cln2b"),
 });
 
 export const sessions = pgTable("sessions", {

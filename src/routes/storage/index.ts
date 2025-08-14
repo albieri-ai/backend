@@ -66,7 +66,7 @@ export default function (
 			}
 
 			const command = new GetObjectCommand({
-				Bucket: fastify.config.AWS_S3_BUCKET,
+				Bucket: file.bucket || fastify.config.AWS_S3_BUCKET,
 				Key: file.name,
 			});
 

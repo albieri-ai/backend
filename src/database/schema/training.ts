@@ -9,7 +9,6 @@ import {
 	vector,
 	integer,
 	index,
-	uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { personas } from "./personas";
 import { users } from "./auth";

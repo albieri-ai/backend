@@ -1,6 +1,5 @@
 import type { FastifyInstance, FastifyPluginAsync } from "fastify";
 import fp from "fastify-plugin";
-import pg from "pg";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import path from "node:path";
 import { createDb } from "../database/db";

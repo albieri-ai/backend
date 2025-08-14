@@ -30,7 +30,13 @@ const authPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 		advanced: {
 			generateId: createId,
 		},
-		trustedOrigins: ["localhost", "localhost:3000", "http://localhost:3000"],
+		trustedOrigins: [
+			"localhost",
+			"localhost:3000",
+			"http://localhost:3000",
+			"*.albieri.ai",
+			"*",
+		],
 		emailAndPassword: {
 			enabled: true,
 			minPasswordLength: 8,
