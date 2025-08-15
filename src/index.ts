@@ -33,12 +33,12 @@ async function createServer() {
 		reply.status(error.statusCode || 500).send({ error: error.message }),
 	);
 
-	// server.register(cors, {
-	// 	origin: ["app.dev.albieri.ai", "app.albieri.ai", "*.albieri.ai"],
-	// 	methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-	// 	credentials: true,
-	// 	maxAge: 86400,
-	// });
+	server.register(cors, {
+		origin: ["app.dev.albieri.ai", "app.albieri.ai", "*.albieri.ai"],
+		methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+		credentials: true,
+		maxAge: 86400,
+	});
 
 	await server.register(fastifyEnv, {
 		dotenv: true,
