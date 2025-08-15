@@ -49,9 +49,5 @@ USER nodejs
 # Expose the port (matching the default in your app)
 EXPOSE 8080
 
-# Health check (optional, adjust endpoint as needed)
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:8080/', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"
-
 # Start the application
 CMD ["pnpm", "start"]
