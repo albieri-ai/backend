@@ -108,6 +108,7 @@ async function createServer() {
 
 	await server.listen({
 		port: server.config.PORT ? parseInt(server.config.PORT) : 8080,
+		host: "0.0.0.0",
 	});
 }
 
