@@ -9,7 +9,7 @@ export default function (
 	});
 
 	fastify.route({
-		method: ["GET", "POST"],
+		method: ["GET", "POST", "OPTIONS"],
 		url: "/api/auth/*",
 		handler: async (request, reply) => {
 			try {
@@ -17,6 +17,7 @@ export default function (
 
 				const headers = new Headers();
 				Object.entries(request.headers).forEach(([key, value]) => {
+					console.log("header: ", key, value);
 					if (value) headers.append(key, value.toString());
 				});
 

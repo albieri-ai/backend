@@ -29,8 +29,8 @@ const authPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 		},
 		advanced: {
 			generateId: createId,
+			disableCSRFCheck: true,
 		},
-		disableCSRFCheck: true,
 		// trustedOrigins: [
 		// 	"localhost",
 		// 	"localhost:3000",
