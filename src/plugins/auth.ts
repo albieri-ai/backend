@@ -30,15 +30,10 @@ const authPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 		advanced: {
 			generateId: createId,
 			disableCSRFCheck: true,
+			crossSubDomainCookies: {
+				enabled: true,
+			},
 		},
-		// trustedOrigins: [
-		// 	"localhost",
-		// 	"localhost:3000",
-		// 	"http://localhost:3000",
-		// 	"*.albieri.ai",
-		// 	"app.dev.albieri.ai",
-		// 	"app.albieri.ai",
-		// ],
 		emailAndPassword: {
 			enabled: true,
 			minPasswordLength: 8,

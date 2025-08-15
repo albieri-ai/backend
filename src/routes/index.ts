@@ -17,7 +17,6 @@ export default function (
 
 				const headers = new Headers();
 				Object.entries(request.headers).forEach(([key, value]) => {
-					console.log("header: ", key, value);
 					if (value) headers.append(key, value.toString());
 				});
 
