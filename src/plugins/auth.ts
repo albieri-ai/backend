@@ -35,7 +35,8 @@ const authPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 			"localhost:3000",
 			"http://localhost:3000",
 			"*.albieri.ai",
-			"*",
+			"app.dev.albieri.ai",
+			"app.albieri.ai",
 		],
 		emailAndPassword: {
 			enabled: true,

@@ -34,7 +34,7 @@ async function createServer() {
 	);
 
 	server.register(cors, {
-		origin: ["*.albieri.ai"],
+		origin: ["app.dev.albieri.ai", "app.albieri.ai", "*.albieri.ai"],
 		methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
 		credentials: true,
 		maxAge: 86400,
