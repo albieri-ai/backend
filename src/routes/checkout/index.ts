@@ -31,6 +31,6 @@ export default function (
 			success_url: `${fastify.config.APP_URL}/onboarding/comecar`,
 		});
 
-		return reply.redirect(session.url!);
+		return reply.send({ data: { url: session.url! } });
 	});
 }
