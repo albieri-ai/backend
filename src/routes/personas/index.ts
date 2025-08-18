@@ -3,6 +3,7 @@ import {
 	members,
 	organizations,
 	personas,
+	subscriptions,
 	topics,
 } from "../../database/schema";
 import { z } from "zod";
@@ -124,6 +125,18 @@ export default function (
 
 					return;
 				}
+
+				await trx
+					.update(subscriptions)
+					.set({
+						organization: organization.id,
+					})
+					.where(
+						and(
+							eq(subscriptions.owner, request.user!.id),
+							isNull(subscriptions.organization),
+						),
+					);
 
 				await trx.insert(personas).values({
 					...request.body,

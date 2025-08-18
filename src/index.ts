@@ -18,6 +18,7 @@ import type { personas } from "./database/schema";
 import type { createGoogleGenerativeAI } from "@ai-sdk/google";
 import type { createGroq } from "@ai-sdk/groq";
 import type { createOpenAI } from "@ai-sdk/openai";
+import Stripe from "stripe";
 
 async function createServer() {
 	const server = fastify({
@@ -56,6 +57,8 @@ async function createServer() {
 				"OPENAI_API_KEY",
 				"STRIPE_SECRET_KEY",
 				"APP_URL",
+				"STRIPE_WEBHOOK_SECRET",
+				"APP_ENV",
 			],
 			properties: {
 				PORT: {
@@ -93,6 +96,12 @@ async function createServer() {
 					type: "string",
 				},
 				STRIPE_SECRET_KEY: {
+					type: "string",
+				},
+				STRIPE_WEBHOOK_SECRET: {
+					type: "string",
+				},
+				APP_ENV: {
 					type: "string",
 				},
 				APP_URL: {
@@ -136,10 +145,13 @@ declare module "fastify" {
 			OPENAI_API_KEY: string;
 			STRIPE_SECRET_KEY: string;
 			APP_URL: string;
+			STRIPE_WEBHOOK_SECRET: string;
+			APP_ENV: string;
 		};
 		db: NodePgDatabase<typeof schema> & { $client: pg.Client };
 		auth: typeof auth;
 		s3: S3Client;
+		stripe: Stripe;
 		ai: {
 			providers: {
 				gemini: ReturnType<typeof createGoogleGenerativeAI>;

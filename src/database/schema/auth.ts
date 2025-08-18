@@ -1,3 +1,4 @@
+import { relations } from "drizzle-orm";
 import { pgTable, text, timestamp, boolean } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
@@ -110,3 +111,22 @@ export const invitations = pgTable("invitations", {
 		.notNull()
 		.references(() => users.id, { onDelete: "cascade" }),
 });
+
+export const organizationRelations = relations(organizations, ({ many }) => ({
+	members: many(members),
+	invitations: many(invitations),
+}));
+
+export const membersRelations = relations(members, ({ one }) => ({
+	organization: one(organizations, {
+		fields: [members.organizationId],
+		references: [organizations.id],
+	}),
+}));
+
+export const invitationsRelations = relations(invitations, ({ one }) => ({
+	organization: one(organizations, {
+		fields: [invitations.organizationId],
+		references: [organizations.id],
+	}),
+}));

@@ -1,19 +1,33 @@
-import { pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
-import { organizations } from "./auth";
-import { createId } from "@paralleldrive/cuid2";
+import {
+	pgTable,
+	serial,
+	text,
+	uniqueIndex,
+	timestamp,
+} from "drizzle-orm/pg-core";
+import { organizations, users } from "./auth";
 
-export const plans = pgTable("plans", {
-	id: serial().primaryKey(),
-});
+export const stripeCustomerId = pgTable(
+	"stripe_customer_id",
+	{
+		id: serial().primaryKey(),
+		user: text("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		stripeId: text().notNull(),
+	},
+	(table) => ({
+		stripeCustomerIdUserIdx: uniqueIndex().on(table.user),
+	}),
+);
 
 export const subscriptions = pgTable("subscriptions", {
-	id: text()
-		.primaryKey()
-		.$default(() => createId()),
-	organization: text()
-		.notNull()
-		.references(() => organizations.id, { onDelete: "cascade" }),
-	pagarmeId: text().notNull(),
-	createdAt: timestamp().defaultNow(),
-	disabledAt: timestamp(),
+	id: serial().primaryKey(),
+	owner: text().references(() => users.id, { onDelete: "cascade" }),
+	organization: text().references(() => organizations.id, {
+		onDelete: "set null",
+	}),
+	stripeId: text().notNull(),
+	createdAt: timestamp("created_at"),
+	endAt: timestamp("end_at"),
 });
