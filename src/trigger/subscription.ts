@@ -5,10 +5,11 @@ import {
 	organizations,
 	personas,
 	stripeCustomerId,
+	subscriptionLimits,
 	subscriptions,
 	userMessages,
 } from "../database/schema";
-import { and, between, count, eq, getTableColumns, sum } from "drizzle-orm";
+import { and, between, count, eq, getTableColumns, or, sum } from "drizzle-orm";
 import Stripe from "stripe";
 
 export const TrackSubscriptionUsage = task({
@@ -74,7 +75,23 @@ export const TrackSubscriptionUsage = task({
 				d.price.id === "price_1RwmRkI8ev3lBpW60EMaug3I",
 		);
 
+		const defaultLimits = await db
+			.select()
+			.from(subscriptionLimits)
+			.where(
+				and(
+					eq(subscriptionLimits.subscription, subscription.id),
+					or(
+						eq(subscriptionLimits.key, "words"),
+						eq(subscriptionLimits.key, "messages"),
+					),
+				),
+			);
+
 		if (extraWordsItem) {
+			const wordLimit = defaultLimits.find((d) => d.key === "words");
+			const wordLimitCount = wordLimit?.value ? parseInt(wordLimit?.value) : 0;
+
 			const words = await db
 				.select({
 					words: sum(userMessages.wordCount).as("words"),
@@ -93,18 +110,23 @@ export const TrackSubscriptionUsage = task({
 				.groupBy(userMessages.persona)
 				.then(([res]) => res?.words || 0);
 
-			if (words) {
+			if (words > wordLimitCount) {
 				await stripe.billing.meterEvents.create({
 					event_name: "albieri_words",
 					payload: {
 						stripe_customer_id: stripeCustomer.stripeId,
-						value: words,
+						value: (parseInt(words) - wordLimitCount).toFixed(0),
 					},
 				});
 			}
 		}
 
 		if (extraMessagesItem) {
+			const messageLimit = defaultLimits.find((d) => d.key === "messages");
+			const messageLimitCount = messageLimit?.value
+				? parseInt(messageLimit?.value)
+				: 0;
+
 			const messages = await db
 				.select({
 					messages: count().as("messages"),
@@ -123,12 +145,12 @@ export const TrackSubscriptionUsage = task({
 				.groupBy(userMessages.persona)
 				.then(([res]) => res?.messages || 0);
 
-			if (messages) {
+			if (messages > messageLimitCount) {
 				await stripe.billing.meterEvents.create({
 					event_name: "albieri_messages",
 					payload: {
 						stripe_customer_id: stripeCustomer.stripeId,
-						value: messages.toFixed(0),
+						value: (messages - messageLimitCount).toFixed(0),
 					},
 				});
 			}

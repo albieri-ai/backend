@@ -5,6 +5,7 @@ import {
 	uniqueIndex,
 	timestamp,
 	integer,
+	pgEnum,
 } from "drizzle-orm/pg-core";
 import { organizations, users } from "./auth";
 
@@ -34,6 +35,22 @@ export const subscriptions = pgTable("subscriptions", {
 	createdAt: timestamp("created_at"),
 	endAt: timestamp("end_at"),
 });
+
+export const SubscriptionLimit = pgEnum("subscription_limit", [
+	"messages",
+	"words",
+]);
+
+export const subscriptionLimits = pgTable("subscription_limits", {
+	id: serial().primaryKey(),
+	subscription: integer()
+		.notNull()
+		.references(() => subscriptions.id, { onDelete: "cascade" }),
+	key: SubscriptionLimit().notNull(),
+	value: text().notNull(),
+}, (table) => ({
+  subscriptionLimitSubscriptionKeyIdx: uniqueIndex().on(table.subscription, table.key)
+}));
 
 export const subscriptionUsageTrackWorkflow = pgTable(
 	"subscription_usage_track_workflow",

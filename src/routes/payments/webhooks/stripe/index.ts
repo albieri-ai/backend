@@ -3,6 +3,7 @@ import {
 	members,
 	organizations,
 	stripeCustomerId,
+	subscriptionLimits,
 	subscriptions,
 	subscriptionUsageTrackWorkflow,
 } from "../../../../database/schema";
@@ -52,7 +53,7 @@ export default function (
 				.limit(1)
 				.then(([res]) => res);
 
-			return trx
+			const insertedSubscription = await trx
 				.insert(subscriptions)
 				.values({
 					owner: dbUser.id,
@@ -63,6 +64,21 @@ export default function (
 				})
 				.returning()
 				.then(([res]) => res);
+
+			await trx.insert(subscriptionLimits).values([
+				{
+					subscription: insertedSubscription.id,
+					key: "messages",
+					value: "3000",
+				},
+				{
+					subscription: insertedSubscription.id,
+					key: "words",
+					value: "1000000",
+				},
+			]);
+
+			return insertedSubscription;
 		});
 
 		const updateWorkflow = await TrackSubscriptionUsage.trigger(
