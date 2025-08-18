@@ -8,16 +8,7 @@ import {
 	subscriptions,
 	userMessages,
 } from "../database/schema";
-import {
-	and,
-	count,
-	eq,
-	getTableColumns,
-	gte,
-	lte,
-	sql,
-	sum,
-} from "drizzle-orm";
+import { and, between, count, eq, getTableColumns, sum } from "drizzle-orm";
 import Stripe from "stripe";
 
 export const TrackSubscriptionUsage = task({
@@ -37,6 +28,12 @@ export const TrackSubscriptionUsage = task({
 		if (!subscription || !subscription.organization) {
 			return;
 		}
+
+		const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+
+		const stripeSubscription = await stripe.subscriptions.retrieve(
+			subscription.stripeId,
+		);
 
 		const stripeCustomer = await db
 			.select({ ...getTableColumns(stripeCustomerId) })
@@ -66,51 +63,75 @@ export const TrackSubscriptionUsage = task({
 			return;
 		}
 
-		const [statistics] = await db
-			.select({
-				messages: count().as("messages"),
-				words: sum(userMessages.wordCount).as("words"),
-			})
-			.from(userMessages)
-			.where(
-				and(
-					eq(userMessages.persona, persona.id),
-					gte(
-						sql`DATE_TRUNC('day', ${userMessages.date})`,
-						sql`DATE_TRUNC('day', NOW() - INTERVAL '24 hours')`,
-					),
-					lte(
-						sql`DATE_TRUNC('day', ${userMessages.date})`,
-						sql`DATE_TRUNC('day', NOW())`,
-					),
-				),
-			)
-			.groupBy(userMessages.persona);
+		const extraWordsItem = stripeSubscription.items.data.find(
+			(d) =>
+				d.price.id === "price_1Rwm6gIm8TXXTMNzB8yKa71l" ||
+				d.price.id === "price_1RwmRQI8ev3lBpW6zwRgYPzg",
+		);
+		const extraMessagesItem = stripeSubscription.items.data.find(
+			(d) =>
+				d.price.id === "price_1RwmCnIm8TXXTMNzL291RFkL" ||
+				d.price.id === "price_1RwmRkI8ev3lBpW60EMaug3I",
+		);
 
-		if (!statistics) {
-			return null;
+		if (extraWordsItem) {
+			const words = await db
+				.select({
+					words: sum(userMessages.wordCount).as("words"),
+				})
+				.from(userMessages)
+				.where(
+					and(
+						eq(userMessages.persona, persona.id),
+						between(
+							userMessages.date,
+							new Date(extraWordsItem.current_period_start),
+							new Date(extraWordsItem.current_period_end),
+						),
+					),
+				)
+				.groupBy(userMessages.persona)
+				.then(([res]) => res?.words || 0);
+
+			if (words) {
+				await stripe.billing.meterEvents.create({
+					event_name: "albieri_words",
+					payload: {
+						stripe_customer_id: stripeCustomer.stripeId,
+						value: words,
+					},
+				});
+			}
 		}
 
-		const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+		if (extraMessagesItem) {
+			const messages = await db
+				.select({
+					messages: count().as("messages"),
+				})
+				.from(userMessages)
+				.where(
+					and(
+						eq(userMessages.persona, persona.id),
+						between(
+							userMessages.date,
+							new Date(extraMessagesItem.current_period_start),
+							new Date(extraMessagesItem.current_period_end),
+						),
+					),
+				)
+				.groupBy(userMessages.persona)
+				.then(([res]) => res?.messages || 0);
 
-		if (statistics.words) {
-			await stripe.billing.meterEvents.create({
-				event_name: "albieri_words",
-				payload: {
-					stripe_customer_id: stripeCustomer.stripeId,
-					value: statistics.words,
-				},
-			});
-		}
-
-		if (statistics.messages) {
-			await stripe.billing.meterEvents.create({
-				event_name: "albieri_messages",
-				payload: {
-					stripe_customer_id: stripeCustomer.stripeId,
-					value: statistics.messages.toFixed(0),
-				},
-			});
+			if (messages) {
+				await stripe.billing.meterEvents.create({
+					event_name: "albieri_messages",
+					payload: {
+						stripe_customer_id: stripeCustomer.stripeId,
+						value: messages.toFixed(0),
+					},
+				});
+			}
 		}
 	},
 });
