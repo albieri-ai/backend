@@ -4,8 +4,11 @@ import {
 	organizations,
 	stripeCustomerId,
 	subscriptions,
+	subscriptionUsageTrackWorkflow,
 } from "../../../../database/schema";
 import { eq } from "drizzle-orm";
+import { TrackSubscriptionUsage } from "../../../../trigger/subscription";
+import { schedules } from "@trigger.dev/sdk/v3";
 
 export default function (
 	fastify: FastifyInstance,
@@ -27,7 +30,7 @@ export default function (
 			throw new Error("customer not found");
 		}
 
-		await fastify.db.transaction(async (trx) => {
+		const albieriSubscription = await fastify.db.transaction(async (trx) => {
 			const dbUser = await trx.query.users.findFirst({
 				where: (u, { eq }) => eq(u.email, customer.email!),
 			});
@@ -49,13 +52,39 @@ export default function (
 				.limit(1)
 				.then(([res]) => res);
 
-			await trx.insert(subscriptions).values({
-				owner: dbUser.id,
-				stripeId: subscription.id,
-				organization: userOrganization?.id,
-				createdAt: new Date(subscription.start_date),
-				endAt: subscription.ended_at ? new Date(subscription.ended_at) : null,
-			});
+			return trx
+				.insert(subscriptions)
+				.values({
+					owner: dbUser.id,
+					stripeId: subscription.id,
+					organization: userOrganization?.id,
+					createdAt: new Date(subscription.start_date),
+					endAt: subscription.ended_at ? new Date(subscription.ended_at) : null,
+				})
+				.returning()
+				.then(([res]) => res);
+		});
+
+		const updateWorkflow = await TrackSubscriptionUsage.trigger(
+			{
+				subscriptionId: albieriSubscription.id,
+			},
+			{
+				idempotencyKey: `track-subscription-usage-${albieriSubscription.id}`,
+			},
+		);
+
+		const schedule = await schedules.create({
+			task: updateWorkflow.id,
+			externalId: `track-subscription-usage-${albieriSubscription.id}`,
+			cron: "0 3 * * *",
+			timezone: "America/Sao_Paulo",
+			deduplicationKey: `track-subscription-usage-${albieriSubscription.id}`,
+		});
+
+		await fastify.db.insert(subscriptionUsageTrackWorkflow).values({
+			subscription: albieriSubscription.id,
+			workflowId: schedule.id,
 		});
 	}
 
@@ -78,12 +107,28 @@ export default function (
 			await fastify.stripe.subscriptions.retrieve(subscriptionId);
 
 		if (subscription.ended_at) {
-			await fastify.db
+			const updatedSubscription = await fastify.db
 				.update(subscriptions)
 				.set({
 					endAt: subscription.ended_at ? new Date(subscription.ended_at) : null,
 				})
-				.where(eq(subscriptions.stripeId, subscription.id));
+				.where(eq(subscriptions.stripeId, subscription.id))
+				.returning()
+				.then(([res]) => res);
+
+			const [workflow] = await fastify.db
+				.select()
+				.from(subscriptionUsageTrackWorkflow)
+				.where(
+					eq(
+						subscriptionUsageTrackWorkflow.subscription,
+						updatedSubscription.id,
+					),
+				);
+
+			if (workflow) {
+				await schedules.deactivate(workflow.workflowId!);
+			}
 		}
 	}
 

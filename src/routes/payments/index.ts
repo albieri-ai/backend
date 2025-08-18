@@ -19,6 +19,32 @@ export default function (
 		});
 
 		if (!organization) {
+			const stripeCustomer = await fastify.db.query.stripeCustomerId.findFirst({
+				where: (sic, { eq }) => eq(sic.user, request.user!.id),
+			});
+
+			const activeUserSubscriptions = await fastify.stripe.subscriptions.list({
+				customer: stripeCustomer?.stripeId,
+				status: "active",
+			});
+
+			if (activeUserSubscriptions?.data.length) {
+				const stripeSubscription = activeUserSubscriptions.data[0];
+
+				return reply.send({
+					data: {
+						id: stripeSubscription.id,
+						status: stripeSubscription.status,
+						canceledAt: stripeSubscription.canceled_at,
+						// discounts: stripeSubscription.discounts,
+						endedAt: stripeSubscription.ended_at,
+						startDate: stripeSubscription.start_date,
+						trialEnd: stripeSubscription.trial_end,
+						trialStart: stripeSubscription.trial_start,
+					},
+				});
+			}
+
 			return reply.callNotFound();
 		}
 
@@ -91,23 +117,34 @@ export default function (
 	});
 
 	fastify.post("/checkout/session", async (request, reply) => {
+		const env = fastify.config.APP_ENV;
+		const baseSubscriptionPriceId =
+			env === "production"
+				? "price_1RsOvDIm8TXXTMNzlkG0ysKa"
+				: "price_1RwmPLI8ev3lBpW6N0ewKn1G";
+		const messagesPackagePriceId =
+			env === "production"
+				? "price_1Rwm6gIm8TXXTMNzB8yKa71l"
+				: "price_1RwmRQI8ev3lBpW6zwRgYPzg";
+		const wordsPackagePriceId =
+			env === "production"
+				? "price_1RwmCnIm8TXXTMNzL291RFkL"
+				: "price_1RwmRkI8ev3lBpW60EMaug3I";
+
 		const session = await fastify.stripe.checkout.sessions.create({
 			client_reference_id: request.user!.id,
 			customer_email: request.user!.email,
 			mode: "subscription",
 			line_items: [
 				{
-					// price: "price_1RsOvDIm8TXXTMNzlkG0ysKa",
-					price: "price_1RwmPLI8ev3lBpW6N0ewKn1G",
+					price: baseSubscriptionPriceId,
 					quantity: 1,
 				},
 				{
-					// price: "price_1Rwm6gIm8TXXTMNzB8yKa71l",
-					price: "price_1RwmRQI8ev3lBpW6zwRgYPzg",
+					price: messagesPackagePriceId,
 				},
 				{
-					// price: "price_1RwmCnIm8TXXTMNzL291RFkL",
-					price: "price_1RwmRkI8ev3lBpW60EMaug3I",
+					price: wordsPackagePriceId,
 				},
 			],
 			ui_mode: "hosted",
