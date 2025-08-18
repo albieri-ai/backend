@@ -18,7 +18,7 @@ import type { personas } from "./database/schema";
 import type { createGoogleGenerativeAI } from "@ai-sdk/google";
 import type { createGroq } from "@ai-sdk/groq";
 import type { createOpenAI } from "@ai-sdk/openai";
-import Stripe from "stripe";
+import type Stripe from "stripe";
 
 async function createServer() {
 	const server = fastify({

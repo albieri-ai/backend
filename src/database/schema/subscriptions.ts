@@ -23,7 +23,9 @@ export const stripeCustomerId = pgTable(
 
 export const subscriptions = pgTable("subscriptions", {
 	id: serial().primaryKey(),
-	owner: text().references(() => users.id, { onDelete: "cascade" }),
+	owner: text()
+		.notNull()
+		.references(() => users.id, { onDelete: "cascade" }),
 	organization: text().references(() => organizations.id, {
 		onDelete: "set null",
 	}),

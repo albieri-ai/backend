@@ -1,26 +1,16 @@
 import type { FastifyInstance, FastifyServerOptions } from "fastify";
-import { stripeCustomerId } from "../../database/schema";
-import { eq } from "drizzle-orm";
 
 export default function (
 	fastify: FastifyInstance,
 	_opts: FastifyServerOptions,
 ) {
-	fastify.post("/billing/session", async (request, reply) => {
-		const [customer] = await fastify.db
-			.select()
-			.from(stripeCustomerId)
-			.where(eq(stripeCustomerId.user, request.user!.id));
-
-		if (!customer) {
-			return reply.callNotFound();
-		}
-
+	fastify.get("/subscription", async (request, reply) => {
 		const organization = await fastify.db.query.members.findFirst({
 			columns: {},
 			with: {
 				organization: {
 					columns: {
+						id: true,
 						slug: true,
 					},
 				},
@@ -32,8 +22,68 @@ export default function (
 			return reply.callNotFound();
 		}
 
+		const subscription = await fastify.db.query.subscriptions.findFirst({
+			where: (s, { eq }) => eq(s.organization, organization.organization.id),
+		});
+
+		if (!subscription) {
+			return reply.callNotFound();
+		}
+
+		const stripeSubscription = await fastify.stripe.subscriptions.retrieve(
+			subscription.stripeId,
+		);
+
+		return reply.send({
+			data: {
+				id: stripeSubscription.id,
+				status: stripeSubscription.status,
+				canceledAt: stripeSubscription.canceled_at,
+				// discounts: stripeSubscription.discounts,
+				endedAt: stripeSubscription.ended_at,
+				startDate: stripeSubscription.start_date,
+				trialEnd: stripeSubscription.trial_end,
+				trialStart: stripeSubscription.trial_start,
+			},
+		});
+	});
+
+	fastify.post("/billing/session", async (request, reply) => {
+		const organization = await fastify.db.query.members.findFirst({
+			columns: {},
+			with: {
+				organization: {
+					columns: {
+						id: true,
+						slug: true,
+					},
+				},
+			},
+			where: (m, { eq }) => eq(m.userId, request.user!.id),
+		});
+
+		if (!organization) {
+			return reply.callNotFound();
+		}
+
+		const subscription = await fastify.db.query.subscriptions.findFirst({
+			where: (s, { eq }) => eq(s.organization, organization.organization.id),
+		});
+
+		if (!subscription) {
+			return reply.callNotFound();
+		}
+
+		const stripeCustomer = await fastify.db.query.stripeCustomerId.findFirst({
+			where: (sci, { eq }) => eq(sci.user, subscription.owner!),
+		});
+
+		if (!stripeCustomer) {
+			return reply.callNotFound();
+		}
+
 		const session = await fastify.stripe.billingPortal.sessions.create({
-			customer: customer.stripeId,
+			customer: stripeCustomer.stripeId,
 			return_url: `${fastify.config.APP_URL}/u/${organization.organization.slug}`,
 		});
 
