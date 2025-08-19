@@ -108,9 +108,9 @@ export const TrackSubscriptionUsage = task({
 					),
 				)
 				.groupBy(userMessages.persona)
-				.then(([res]) => res?.words || 0);
+				.then(([res]) => res?.words || "0");
 
-			if (words > wordLimitCount) {
+			if (parseInt(words) > wordLimitCount) {
 				await stripe.billing.meterEvents.create({
 					event_name: "albieri_words",
 					payload: {
