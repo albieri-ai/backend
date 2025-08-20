@@ -28,7 +28,9 @@ const authPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 			},
 		},
 		advanced: {
-			generateId: createId,
+			database: {
+				generateId: createId,
+			},
 			disableCSRFCheck: true,
 			crossSubDomainCookies: {
 				enabled: true,
