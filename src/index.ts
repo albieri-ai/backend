@@ -35,7 +35,7 @@ async function createServer() {
 	);
 
 	server.register(cors, {
-		methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+		methods: "GET,POST,PUT,PATCH,DELETE",
 		origin: true,
 		credentials: true,
 	});
