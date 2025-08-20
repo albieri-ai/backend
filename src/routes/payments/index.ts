@@ -45,7 +45,7 @@ export default function (
 				});
 			}
 
-			return reply.callNotFound();
+			return reply.send({ data: null });
 		}
 
 		const subscription = await fastify.db.query.subscriptions.findFirst({
@@ -53,7 +53,7 @@ export default function (
 		});
 
 		if (!subscription) {
-			return reply.callNotFound();
+			return reply.send({ data: null });
 		}
 
 		const stripeSubscription = await fastify.stripe.subscriptions.retrieve(
