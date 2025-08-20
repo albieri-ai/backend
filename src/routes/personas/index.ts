@@ -70,7 +70,7 @@ export default function (
 			...persona,
 			photo: {
 				...persona.photo,
-				url: `${fastify.config.BACKEND_URL}/storage/files/${persona.photo.id}`,
+				url: `${fastify.config.BACKEND_URL}/storage/files/${persona.photo.id}/url`,
 			},
 			topics: persona.topics.map((t) => t.topic),
 		};
