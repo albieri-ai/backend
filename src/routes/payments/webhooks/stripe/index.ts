@@ -64,7 +64,6 @@ export default function (
 						? new Date(subscription.ended_at * 1000)
 						: null,
 				})
-				.returning()
 				.onConflictDoUpdate({
 					target: [subscriptions.stripeId],
 					set: {
@@ -75,6 +74,7 @@ export default function (
 							: null,
 					},
 				})
+				.returning()
 				.then(([res]) => res);
 
 			await trx.insert(subscriptionLimits).values([
