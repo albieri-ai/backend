@@ -5,6 +5,10 @@ export default function (
 	_opts: FastifyServerOptions,
 ) {
 	fastify.get("/subscription", async (request, reply) => {
+		if (!request.user) {
+			return reply.status(401).send({ error: "Unauthorized" });
+		}
+
 		const organization = await fastify.db.query.members.findFirst({
 			columns: {},
 			with: {
