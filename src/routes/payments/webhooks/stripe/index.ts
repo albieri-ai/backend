@@ -81,18 +81,9 @@ export default function (
 			return insertedSubscription;
 		});
 
-		const updateWorkflow = await TrackSubscriptionUsage.trigger(
-			{
-				subscriptionId: albieriSubscription.id,
-			},
-			{
-				idempotencyKey: `track-subscription-usage-${albieriSubscription.id}`,
-			},
-		);
-
 		const schedule = await schedules.create({
-			task: updateWorkflow.id,
-			externalId: `track-subscription-usage-${albieriSubscription.id}`,
+			task: TrackSubscriptionUsage.id,
+			externalId: albieriSubscription.id.toString(),
 			cron: "0 3 * * *",
 			timezone: "America/Sao_Paulo",
 			deduplicationKey: `track-subscription-usage-${albieriSubscription.id}`,

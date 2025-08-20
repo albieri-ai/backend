@@ -1,4 +1,4 @@
-import { task } from "@trigger.dev/sdk/v3";
+import { schedules } from "@trigger.dev/sdk/v3";
 import { createDb } from "../database/db";
 import {
 	members,
@@ -12,9 +12,13 @@ import {
 import { and, between, count, eq, getTableColumns, or, sum } from "drizzle-orm";
 import Stripe from "stripe";
 
-export const TrackSubscriptionUsage = task({
+export const TrackSubscriptionUsage = schedules.task({
 	id: "track-subscription-usage",
-	run: async (payload: { subscriptionId: number }) => {
+	run: async (payload) => {
+		if (!payload.externalId) {
+			throw new Error("invalid external id");
+		}
+
 		const { db } = await createDb({
 			connectionString: process.env.DATABASE_URL!,
 		});
@@ -22,7 +26,7 @@ export const TrackSubscriptionUsage = task({
 		const subscription = await db
 			.select()
 			.from(subscriptions)
-			.where(eq(subscriptions.id, payload.subscriptionId))
+			.where(eq(subscriptions.id, parseInt(payload.externalId)))
 			.limit(1)
 			.then(([res]) => res);
 
