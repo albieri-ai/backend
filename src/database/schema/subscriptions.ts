@@ -31,7 +31,7 @@ export const subscriptions = pgTable("subscriptions", {
 	organization: text().references(() => organizations.id, {
 		onDelete: "set null",
 	}),
-	stripeId: text().notNull(),
+	stripeId: text().notNull().unique(),
 	createdAt: timestamp("created_at"),
 	endAt: timestamp("end_at"),
 });

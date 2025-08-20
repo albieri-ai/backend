@@ -59,10 +59,22 @@ export default function (
 					owner: dbUser.id,
 					stripeId: subscription.id,
 					organization: userOrganization?.id,
-					createdAt: new Date(subscription.start_date),
-					endAt: subscription.ended_at ? new Date(subscription.ended_at) : null,
+					createdAt: new Date(subscription.start_date * 1000),
+					endAt: subscription.ended_at
+						? new Date(subscription.ended_at * 1000)
+						: null,
 				})
 				.returning()
+				.onConflictDoUpdate({
+					target: [subscriptions.stripeId],
+					set: {
+						organization: userOrganization?.id,
+						createdAt: new Date(subscription.start_date * 1000),
+						endAt: subscription.ended_at
+							? new Date(subscription.ended_at * 1000)
+							: null,
+					},
+				})
 				.then(([res]) => res);
 
 			await trx.insert(subscriptionLimits).values([
@@ -103,7 +115,9 @@ export default function (
 			await fastify.db
 				.update(subscriptions)
 				.set({
-					endAt: subscription.ended_at ? new Date(subscription.ended_at) : null,
+					endAt: subscription.ended_at
+						? new Date(subscription.ended_at * 1000)
+						: null,
 				})
 				.where(eq(subscriptions.stripeId, subscription.id));
 		}
@@ -117,7 +131,9 @@ export default function (
 			const updatedSubscription = await fastify.db
 				.update(subscriptions)
 				.set({
-					endAt: subscription.ended_at ? new Date(subscription.ended_at) : null,
+					endAt: subscription.ended_at
+						? new Date(subscription.ended_at * 1000)
+						: null,
 				})
 				.where(eq(subscriptions.stripeId, subscription.id))
 				.returning()
