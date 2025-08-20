@@ -40,10 +40,18 @@ export default function (
 				throw new Error("user not found");
 			}
 
-			await trx.insert(stripeCustomerId).values({
-				user: dbUser.id,
-				stripeId: customer.id,
-			});
+			await trx
+				.insert(stripeCustomerId)
+				.values({
+					user: dbUser.id,
+					stripeId: customer.id,
+				})
+				.onConflictDoUpdate({
+					target: [stripeCustomerId.user],
+					set: {
+						stripeId: customer.id,
+					},
+				});
 
 			const userOrganization = await trx
 				.select({ id: organizations.id })
