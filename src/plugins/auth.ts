@@ -56,8 +56,10 @@ const authPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 
 		const session = await authClient.api.getSession({ headers });
 
-		request.session = session?.session;
-		request.user = session?.user;
+		if (session?.session) {
+			request.session = session?.session;
+			request.user = session?.user;
+		}
 	});
 };
 

@@ -117,6 +117,10 @@ export default function (
 	});
 
 	fastify.post("/checkout/session", async (request, reply) => {
+		if (!request.user) {
+			return reply.status(401).send({ error: "Unauthorized" });
+		}
+
 		const env = fastify.config.APP_ENV;
 		const baseSubscriptionPriceId =
 			env === "production"
