@@ -27,6 +27,10 @@ export default function (
 				where: (sic, { eq }) => eq(sic.user, request.user!.id),
 			});
 
+			if (!stripeCustomer) {
+				return reply.send({ data: null });
+			}
+
 			const activeUserSubscriptions = await fastify.stripe.subscriptions.list({
 				customer: stripeCustomer?.stripeId,
 				status: "active",
