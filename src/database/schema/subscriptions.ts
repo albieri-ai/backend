@@ -41,16 +41,23 @@ export const SubscriptionLimit = pgEnum("subscription_limit", [
 	"words",
 ]);
 
-export const subscriptionLimits = pgTable("subscription_limits", {
-	id: serial().primaryKey(),
-	subscription: integer()
-		.notNull()
-		.references(() => subscriptions.id, { onDelete: "cascade" }),
-	key: SubscriptionLimit().notNull(),
-	value: text().notNull(),
-}, (table) => ({
-  subscriptionLimitSubscriptionKeyIdx: uniqueIndex().on(table.subscription, table.key)
-}));
+export const subscriptionLimits = pgTable(
+	"subscription_limits",
+	{
+		id: serial().primaryKey(),
+		subscription: integer()
+			.notNull()
+			.references(() => subscriptions.id, { onDelete: "cascade" }),
+		key: SubscriptionLimit().notNull(),
+		value: text().notNull(),
+	},
+	(table) => ({
+		subscriptionLimitSubscriptionKeyIdx: uniqueIndex().on(
+			table.subscription,
+			table.key,
+		),
+	}),
+);
 
 export const subscriptionUsageTrackWorkflow = pgTable(
 	"subscription_usage_track_workflow",

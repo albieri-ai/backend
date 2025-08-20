@@ -34,7 +34,6 @@ const authPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 			disableCSRFCheck: true,
 			crossSubDomainCookies: {
 				enabled: true,
-				domain: "albieri.ai",
 			},
 		},
 		emailAndPassword: {

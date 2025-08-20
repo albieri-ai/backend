@@ -12,7 +12,7 @@
 		"type-check": "tsc --noEmit",
 		"drizzle:studio": "drizzle-kit studio",
 		"generate": "drizzle-kit generate",
-		"trigger:dev": "pnpm dlx trigger.dev@latest dev"
+		"trigger:dev": "pnpm dlx trigger.dev@3.3.17 dev"
 	},
 	"keywords": [],
 	"author": "",

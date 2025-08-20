@@ -17,7 +17,10 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { z } from "zod";
 import { youtubeChannels } from "../../../../database/schema/youtube";
-import { MonitorYoutubeChannel } from "../../../../trigger/youtube";
+import {
+	MonitorYoutubeChannel,
+	MonitorYoutubeChannelSchedule,
+} from "../../../../trigger/youtube";
 import { schedules } from "@trigger.dev/sdk/v3";
 import axios from "axios";
 import { PersonaBySlugSchema } from "..";
@@ -398,44 +401,48 @@ export default function (
 					),
 				);
 
-			const [channel] = await fastify.db
-				.insert(youtubeChannels)
-				.values({
-					persona: persona.id,
-					url: request.body.url,
-					keepSynced: request.body.keepSynced,
-					createdBy: request.user!.id,
-				})
-				.returning();
-
-			const scheduledTask = await MonitorYoutubeChannel.trigger(
-				{
-					persona: persona.id,
-					channelID: channel.id,
-					url: channel.url,
-					createdBy: channel.createdBy,
-				},
-				{
-					idempotencyKey: `monitor-youtube-channel-${persona.id}-${channel.id}`,
-				},
-			);
-
-			if (request.body.keepSynced) {
-				const schedule = await schedules.create({
-					task: scheduledTask.id,
-					externalId: `monitor-youtube-channel-${persona.id}-${channel.id}`,
-					cron: "0 */5 * * *",
-					timezone: "America/Sao_Paulo",
-					deduplicationKey: `monitor-youtube-channel-${persona.id}-${channel.id}`,
-				});
-
-				await fastify.db
-					.update(youtubeChannels)
-					.set({
-						triggerId: schedule.id,
+			const channel = await fastify.db.transaction(async (trx) => {
+				const [channel] = await trx
+					.insert(youtubeChannels)
+					.values({
+						persona: persona.id,
+						url: request.body.url,
+						keepSynced: request.body.keepSynced,
+						createdBy: request.user!.id,
 					})
-					.where(eq(youtubeChannels.id, channel.id));
-			}
+					.returning();
+
+				await MonitorYoutubeChannel.trigger(
+					{
+						id: channel.id,
+						persona: persona.id,
+						url: channel.url,
+						createdBy: channel.createdBy,
+					},
+					{
+						idempotencyKey: `monitor-youtube-channel-${persona.id}-${channel.id}`,
+					},
+				);
+
+				if (request.body.keepSynced) {
+					const schedule = await schedules.create({
+						task: MonitorYoutubeChannelSchedule.id,
+						externalId: channel.id,
+						cron: "0 */5 * * *",
+						timezone: "America/Sao_Paulo",
+						deduplicationKey: `monitor-youtube-channel-${persona.id}-${channel.id}`,
+					});
+
+					await trx
+						.update(youtubeChannels)
+						.set({
+							triggerId: schedule.id,
+						})
+						.where(eq(youtubeChannels.id, channel.id));
+				}
+
+				return channel;
+			});
 
 			reply.send({ data: channel });
 		},
@@ -512,6 +519,17 @@ export default function (
 					),
 				);
 
+			const [oldChannel] = await fastify.db
+				.select()
+				.from(youtubeChannels)
+				.where(
+					and(
+						eq(youtubeChannels.id, request.params.accountId),
+						eq(youtubeChannels.persona, persona.id),
+						isNull(youtubeChannels.disabledAt),
+					),
+				);
+
 			const [updatedChannel] = await fastify.db
 				.update(youtubeChannels)
 				.set({
@@ -530,23 +548,13 @@ export default function (
 				return reply.callNotFound();
 			}
 
-			if (updatedChannel.keepSynced) {
-				const scheduledTask = await MonitorYoutubeChannel.trigger(
-					{
-						persona: persona.id,
-						channelID: updatedChannel.id,
-						url: updatedChannel.url,
-						createdBy: updatedChannel.createdBy,
-					},
-					{
-						idempotencyKey: `monitor-youtube-channel-${persona.id}-${updatedChannel.id}`,
-					},
-				);
-
-				if (request.body.keepSynced) {
+			if (updatedChannel.keepSynced && !oldChannel.keepSynced) {
+				if (updatedChannel.triggerId) {
+					await schedules.activate(updatedChannel.triggerId);
+				} else {
 					const schedule = await schedules.create({
-						task: scheduledTask.id,
-						externalId: `monitor-youtube-channel-${persona.id}-${updatedChannel.id}`,
+						task: MonitorYoutubeChannelSchedule.id,
+						externalId: updatedChannel.id,
 						cron: "0 */5 * * *",
 						timezone: "America/Sao_Paulo",
 						deduplicationKey: `monitor-youtube-channel-${persona.id}-${updatedChannel.id}`,
@@ -559,16 +567,9 @@ export default function (
 						})
 						.where(eq(youtubeChannels.id, updatedChannel.id));
 				}
-			} else {
+			} else if (!updatedChannel.keepSynced && oldChannel.keepSynced) {
 				if (updatedChannel.triggerId) {
-					await schedules.deactivate(updatedChannel.triggerId!);
-
-					await fastify.db
-						.update(youtubeChannels)
-						.set({
-							triggerId: null,
-						})
-						.where(eq(youtubeChannels.id, updatedChannel.id));
+					await schedules.deactivate(updatedChannel.triggerId);
 				}
 			}
 
@@ -627,7 +628,7 @@ export default function (
 				);
 
 			if (channel.triggerId) {
-				await schedules.deactivate(channel.triggerId!);
+				await schedules.deactivate(channel.triggerId);
 			}
 
 			return reply.status(204).send();
