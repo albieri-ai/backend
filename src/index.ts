@@ -166,6 +166,12 @@ declare module "fastify" {
 				) => Promise<
 					{ asset: string; summary: string | null; chunk: string }[]
 				>;
+				retrieveYoutubeVideo: (
+					persona: string,
+					embed: number[],
+				) => Promise<
+					{ asset: string; summary: string | null; chunk: string }[]
+				>;
 			};
 		};
 	}

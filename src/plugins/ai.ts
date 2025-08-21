@@ -87,6 +87,52 @@ const aiPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 		return chunks;
 	}
 
+	async function retrieveYoutubeVideo(persona: string, embed: number[]) {
+		const similarAssets = await fastify.db
+			.select({ id: trainingAssets.id, summary: assetSummary.summary })
+			.from(trainingAssets)
+			.leftJoin(assetSummary, eq(assetSummary.asset, trainingAssets.id))
+			.where(
+				and(
+					and(
+						eq(trainingAssets.persona, persona),
+						eq(trainingAssets.enabled, true),
+					),
+					gte(sql`1 - ${cosineDistance(assetSummary.embeddings, embed)}`, 0.6),
+				),
+			);
+
+		if (!similarAssets.length) {
+			return [];
+		}
+
+		const chunks = await fastify.db
+			.select({
+				asset: assetChunks.asset,
+				summary: assetSummary.summary,
+				chunk: assetChunks.text,
+			})
+			.from(assetChunks)
+			.leftJoin(trainingAssets, eq(trainingAssets.id, assetChunks.asset))
+			.leftJoin(assetSummary, eq(assetSummary.asset, trainingAssets.id))
+			.where(
+				and(
+					inArray(
+						assetChunks.asset,
+						similarAssets.map((s) => s.id),
+					),
+					gte(sql`1 - ${cosineDistance(assetSummary.embeddings, embed)}`, 0.5),
+				),
+			)
+			.orderBy(
+				desc(
+					gte(sql`1 - ${cosineDistance(assetSummary.embeddings, embed)}`, 0.6),
+				),
+			);
+
+		return chunks;
+	}
+
 	const ai = {
 		providers: {
 			groq,
@@ -95,6 +141,7 @@ const aiPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 		},
 		handlers: {
 			retrieveContent,
+			retrieveYoutubeVideo,
 		},
 	};
 
