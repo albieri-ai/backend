@@ -12,7 +12,11 @@
 		"declaration": false,
 		"sourceMap": false
 	},
-	"include": ["src/**/*", "auth.ts"],
+  "include": [
+    "src/**/*",
+    "auth.ts",
+    "trigger.config.ts"
+  ],
 	"exclude": [
 		"node_modules",
 		"dist",
