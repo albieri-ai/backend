@@ -117,7 +117,7 @@ export default function (
 							...("name" in request.body ? { name: request.body.name } : {}),
 							...("slug" in request.body ? { slug: request.body.slug } : {}),
 						})
-						.where(eq(organizations.id, personas.organization))
+						.where(eq(organizations.id, request.persona!.organization))
 						.returning();
 				}
 			});
