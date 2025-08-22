@@ -24,6 +24,8 @@ export default function (
 				.from(users)
 				.where(eq(users.id, request.params.userId));
 
+			console.log("user: ", user);
+
 			if (!user?.avatarId) {
 				return reply.callNotFound();
 			}
@@ -33,6 +35,7 @@ export default function (
 					id: files.id,
 					name: files.originalName,
 					mimeType: files.mimeType,
+					bucket: files.bucket,
 					visibility: files.visibility,
 					status: files.status,
 					size: files.size,
@@ -48,13 +51,15 @@ export default function (
 			}
 
 			const command = new GetObjectCommand({
-				Bucket: fastify.config.AWS_S3_BUCKET,
+				Bucket: file.bucket,
 				Key: file.name,
 			});
 
 			const url = await getSignedUrl(fastify.s3, command, {
 				expiresIn: 360,
 			});
+
+			console.log("url: ", url);
 
 			return reply.redirect(url);
 		},
