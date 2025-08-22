@@ -170,7 +170,12 @@ declare module "fastify" {
 					persona: string,
 					embed: number[],
 				) => Promise<
-					{ asset: string; summary: string | null; chunk: string }[]
+					{
+						id: string;
+						title: string;
+						summary: string;
+						url: string;
+					}[]
 				>;
 			};
 		};

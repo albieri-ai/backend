@@ -3,8 +3,22 @@ import fp from "fastify-plugin";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createGroq } from "@ai-sdk/groq";
-import { assetChunks, assetSummary, trainingAssets } from "../database/schema";
-import { and, cosineDistance, desc, eq, gte, inArray, sql } from "drizzle-orm";
+import {
+	assetChunks,
+	assetSummary,
+	trainingAssets,
+	youtubeVideoAssets,
+} from "../database/schema";
+import {
+	and,
+	cosineDistance,
+	desc,
+	eq,
+	gte,
+	inArray,
+	isNotNull,
+	sql,
+} from "drizzle-orm";
 
 const aiPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 	const gemini = createGoogleGenerativeAI({
@@ -87,14 +101,27 @@ const aiPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 		return chunks;
 	}
 
-	async function retrieveYoutubeVideo(persona: string, embed: number[]) {
+	async function retrieveYoutubeVideo(
+		persona: string,
+		embed: number[],
+	): Promise<{ id: string; title: string; url: string; summary: string }[]> {
 		const similarAssets = await fastify.db
-			.select({ id: trainingAssets.id, summary: assetSummary.summary })
+			.select({
+				id: trainingAssets.id,
+				title: youtubeVideoAssets.title,
+				summary: assetSummary.summary,
+				url: youtubeVideoAssets.url,
+			})
 			.from(trainingAssets)
 			.leftJoin(assetSummary, eq(assetSummary.asset, trainingAssets.id))
+			.leftJoin(
+				youtubeVideoAssets,
+				eq(youtubeVideoAssets.asset, trainingAssets.id),
+			)
 			.where(
 				and(
 					and(
+						isNotNull(youtubeVideoAssets.url),
 						eq(trainingAssets.persona, persona),
 						eq(trainingAssets.enabled, true),
 					),
@@ -106,17 +133,23 @@ const aiPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 			return [];
 		}
 
-		const chunks = await fastify.db
+		const chunks = (await fastify.db
 			.select({
-				asset: assetChunks.asset,
+				id: trainingAssets.id,
+				title: youtubeVideoAssets.title,
 				summary: assetSummary.summary,
-				chunk: assetChunks.text,
+				url: youtubeVideoAssets.url,
 			})
 			.from(assetChunks)
 			.leftJoin(trainingAssets, eq(trainingAssets.id, assetChunks.asset))
 			.leftJoin(assetSummary, eq(assetSummary.asset, trainingAssets.id))
+			.leftJoin(
+				youtubeVideoAssets,
+				eq(youtubeVideoAssets.asset, trainingAssets.id),
+			)
 			.where(
 				and(
+					isNotNull(youtubeVideoAssets.url),
 					inArray(
 						assetChunks.asset,
 						similarAssets.map((s) => s.id),
@@ -128,7 +161,7 @@ const aiPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 				desc(
 					gte(sql`1 - ${cosineDistance(assetSummary.embeddings, embed)}`, 0.6),
 				),
-			);
+			)) as { id: string; title: string; summary: string; url: string }[];
 
 		return chunks;
 	}
