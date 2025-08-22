@@ -22,6 +22,8 @@ export const youtubeChannels = pgTable(
 			.references(() => personas.id, { onDelete: "cascade" }),
 		url: text().notNull(),
 		keepSynced: boolean().notNull().default(false),
+		name: text(),
+		thumbnailUrl: text(),
 		triggerId: varchar(),
 		createdBy: text()
 			.notNull()

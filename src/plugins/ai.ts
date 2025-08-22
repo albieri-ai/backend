@@ -19,6 +19,7 @@ import {
 	isNotNull,
 	sql,
 } from "drizzle-orm";
+import { embed, UIMessage } from "ai";
 
 const aiPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 	const gemini = createGoogleGenerativeAI({
@@ -32,17 +33,17 @@ const aiPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 	});
 
 	async function retrieveContent(persona: string, embed: number[]) {
+		const summarySimilarity = sql`1 - (${cosineDistance(assetSummary.embeddings, embed)})`;
+
 		const similarAssets = await fastify.db
 			.select({ id: trainingAssets.id, summary: assetSummary.summary })
 			.from(trainingAssets)
 			.leftJoin(assetSummary, eq(assetSummary.asset, trainingAssets.id))
 			.where(
 				and(
-					and(
-						eq(trainingAssets.persona, persona),
-						eq(trainingAssets.enabled, true),
-					),
-					gte(sql`1 - ${cosineDistance(assetSummary.embeddings, embed)}`, 0.6),
+					eq(trainingAssets.persona, persona),
+					eq(trainingAssets.enabled, true),
+					gte(summarySimilarity, 0.6),
 				),
 			);
 
@@ -63,7 +64,7 @@ const aiPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 							similarAssets.map((s) => s.id),
 						),
 						gte(
-							sql`1 - ${cosineDistance(assetSummary.embeddings, embed)}`,
+							sql`1 - (${cosineDistance(assetSummary.embeddings, embed)})`,
 							0.5,
 						),
 					),
@@ -71,7 +72,7 @@ const aiPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 				.orderBy(
 					desc(
 						gte(
-							sql`1 - ${cosineDistance(assetSummary.embeddings, embed)}`,
+							sql`1 - (${cosineDistance(assetSummary.embeddings, embed)})`,
 							0.6,
 						),
 					),
@@ -166,6 +167,46 @@ const aiPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 		return chunks;
 	}
 
+	async function enhanceMessagePartsWithContext(
+		persona: string,
+		parts: UIMessage["parts"],
+	): Promise<UIMessage["parts"]> {
+		const content = parts
+			.map((p) => (p.type === "text" ? p.text : ""))
+			.filter((p) => p.length > 0)
+			.join("\n");
+
+		const { embedding } = await embed({
+			model: openai.embedding("text-embedding-3-small"),
+			value: content,
+		});
+
+		const similarContent = await retrieveContent(persona, embedding);
+
+		if (!similarContent.length) {
+			return parts;
+		}
+
+		return [
+			{
+				type: "text",
+				text: `
+		  ${content}
+
+			<context>
+			${similarContent
+				.slice(0, 3)
+				.map(
+					(c) =>
+						`Conteúdo: ${c.asset}\nResumo: ${c.summary}\nConteúdo: ${c.chunk}`,
+				)
+				.join("\n\n\n")}
+			</context>
+		`,
+			},
+		];
+	}
+
 	const ai = {
 		providers: {
 			groq,
@@ -175,6 +216,7 @@ const aiPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 		handlers: {
 			retrieveContent,
 			retrieveYoutubeVideo,
+			enhanceMessagePartsWithContext,
 		},
 	};
 

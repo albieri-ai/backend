@@ -62,11 +62,25 @@ export const MonitorYoutubeChannel = task({
 
 		const { data } = await youtubeAPI.get("/channels", {
 			params: {
-				part: "contentDetails",
+				part: "snippet,contentDetails",
 				id: channelID,
 				key: process.env.YOUTUBE_API_KEY,
 			},
 		});
+
+		if (!data.items.length) {
+			throw new Error("invalid channel id");
+		}
+
+		await db
+			.update(youtubeChannels)
+			.set({
+				name: data.items[0].snippet.title,
+				thumbnailUrl:
+					data.items[0].snippet.thumbnails.high.url ||
+					data.items[0].snippet.thumbnails.default.url,
+			})
+			.where(eq(youtubeChannels.id, channel.id));
 
 		const playlistID = data.items[0]?.contentDetails?.relatedPlaylists?.uploads;
 
@@ -277,11 +291,25 @@ export const MonitorYoutubeChannelSchedule = schedules.task({
 
 		const { data } = await youtubeAPI.get("/channels", {
 			params: {
-				part: "contentDetails",
+				part: "snippet,contentDetails",
 				id: channelID,
 				key: process.env.YOUTUBE_API_KEY,
 			},
 		});
+
+		if (!data.items.length) {
+			throw new Error("invalid channel id");
+		}
+
+		await db
+			.update(youtubeChannels)
+			.set({
+				name: data.items[0].snippet.title,
+				thumbnailUrl:
+					data.items[0].snippet.thumbnails.high.url ||
+					data.items[0].snippet.thumbnails.default.url,
+			})
+			.where(eq(youtubeChannels.id, channel.id));
 
 		const playlistID = data.items[0]?.contentDetails?.relatedPlaylists?.uploads;
 

@@ -134,6 +134,13 @@
       "when": 1755703443649,
       "tag": "0018_daffy_butterfly",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1755885222518,
+      "tag": "0019_clumsy_sandman",
+      "breakpoints": true
     }
   ]
 }

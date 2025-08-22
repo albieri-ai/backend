@@ -217,7 +217,11 @@ export default function (
         - certifique-se de que não tenha mais de 80 caracteres
         - o título deve ser um resumo da mensagem do usuário
         - não use aspas ou dois pontos`,
-					prompt: JSON.stringify(request.body.messages.slice(-1)),
+					prompt: JSON.stringify(
+						request.body.messages[request.body.messages.length - 1].parts
+							.map((p) => (p.type === "text" ? p.text : ""))
+							.join("\n"),
+					),
 				});
 
 				await fastify.db.insert(threads).values({
@@ -230,9 +234,34 @@ export default function (
 				});
 			}
 
+			const isFirstUserMessage =
+				request.body.messages.filter((m) => m.role === "user").length === 1;
+
+			let messages = request.body.messages;
+
+			if (isFirstUserMessage) {
+				const userMessageIndex = request.body.messages.findIndex(
+					(m) => m.role === "user",
+				);
+
+				messages = [
+					...request.body.messages.slice(0, userMessageIndex),
+					{
+						...request.body.messages[userMessageIndex],
+						parts: await fastify.ai.handlers.enhanceMessagePartsWithContext(
+							persona.id,
+							request.body.messages[userMessageIndex].parts,
+						),
+					},
+					...request.body.messages.slice(userMessageIndex),
+				];
+			}
+
+			console.log("messages: ", JSON.stringify(messages, null, 2));
+
 			const result = streamText({
 				model: fastify.ai.providers.gemini("gemini-2.0-flash"),
-				messages: convertToModelMessages(request.body.messages),
+				messages: convertToModelMessages(messages),
 				system: `
           # Identidade
 
@@ -446,7 +475,6 @@ export default function (
 						},
 					}),
 				},
-				onError: console.error,
 			});
 
 			reply.header("X-Vercel-AI-Data-Stream", "v1");

@@ -19,6 +19,7 @@ import type { createGoogleGenerativeAI } from "@ai-sdk/google";
 import type { createGroq } from "@ai-sdk/groq";
 import type { createOpenAI } from "@ai-sdk/openai";
 import type Stripe from "stripe";
+import { UIMessage } from "ai";
 
 async function createServer() {
 	const server = fastify({
@@ -160,6 +161,10 @@ declare module "fastify" {
 				openai: ReturnType<typeof createOpenAI>;
 			};
 			handlers: {
+				enhanceMessagePartsWithContext(
+					persona: string,
+					parts: UIMessage["parts"],
+				): Promise<UIMessage["parts"]>;
 				retrieveContent: (
 					persona: string,
 					embed: number[],
