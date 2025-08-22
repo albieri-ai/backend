@@ -70,12 +70,7 @@ const aiPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 					),
 				)
 				.orderBy(
-					desc(
-						gte(
-							sql`1 - (${cosineDistance(assetSummary.embeddings, embed)})`,
-							0.6,
-						),
-					),
+					desc(sql`1 - (${cosineDistance(assetSummary.embeddings, embed)})`),
 				);
 
 			return chunks;
@@ -94,12 +89,7 @@ const aiPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 				gte(sql`1 - (${cosineDistance(assetSummary.embeddings, embed)})`, 0.5),
 			)
 			.orderBy(
-				desc(
-					gte(
-						sql`1 - (${cosineDistance(assetSummary.embeddings, embed)})`,
-						0.6,
-					),
-				),
+				desc(sql`1 - (${cosineDistance(assetSummary.embeddings, embed)})`),
 			);
 
 		return chunks;
@@ -168,12 +158,7 @@ const aiPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 				),
 			)
 			.orderBy(
-				desc(
-					gte(
-						sql`1 - (${cosineDistance(assetSummary.embeddings, embed)})`,
-						0.6,
-					),
-				),
+				desc(sql`1 - (${cosineDistance(assetSummary.embeddings, embed)})`),
 			)) as { id: string; title: string; summary: string; url: string }[];
 
 		return chunks;
