@@ -56,8 +56,6 @@ export const MonitorYoutubeChannel = task({
 			throw new Error("invalid channel url");
 		}
 
-		logger.info("fetching channel info");
-
 		const { data } = await youtubeAPI.get("/channels", {
 			params: {
 				part: "snippet,contentDetails",
@@ -70,15 +68,9 @@ export const MonitorYoutubeChannel = task({
 			throw new Error("invalid channel id");
 		}
 
-		logger.info("channel fetched successfully");
-
-		logger.info("connecting to database");
-
 		const { db } = await createDb({
 			connectionString: process.env.DATABASE_URL!,
 		});
-
-		logger.info("database connected");
 
 		await db
 			.update(youtubeChannels)

@@ -91,11 +91,14 @@ const aiPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 			.leftJoin(trainingAssets, eq(trainingAssets.id, assetChunks.asset))
 			.leftJoin(assetSummary, eq(assetSummary.asset, trainingAssets.id))
 			.where(
-				gte(sql`1 - ${cosineDistance(assetSummary.embeddings, embed)}`, 0.5),
+				gte(sql`1 - (${cosineDistance(assetSummary.embeddings, embed)})`, 0.5),
 			)
 			.orderBy(
 				desc(
-					gte(sql`1 - ${cosineDistance(assetSummary.embeddings, embed)}`, 0.6),
+					gte(
+						sql`1 - (${cosineDistance(assetSummary.embeddings, embed)})`,
+						0.6,
+					),
 				),
 			);
 
@@ -126,7 +129,10 @@ const aiPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 						eq(trainingAssets.persona, persona),
 						eq(trainingAssets.enabled, true),
 					),
-					gte(sql`1 - ${cosineDistance(assetSummary.embeddings, embed)}`, 0.6),
+					gte(
+						sql`1 - (${cosineDistance(assetSummary.embeddings, embed)})`,
+						0.6,
+					),
 				),
 			);
 
@@ -155,12 +161,18 @@ const aiPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 						assetChunks.asset,
 						similarAssets.map((s) => s.id),
 					),
-					gte(sql`1 - ${cosineDistance(assetSummary.embeddings, embed)}`, 0.5),
+					gte(
+						sql`1 - (${cosineDistance(assetSummary.embeddings, embed)})`,
+						0.5,
+					),
 				),
 			)
 			.orderBy(
 				desc(
-					gte(sql`1 - ${cosineDistance(assetSummary.embeddings, embed)}`, 0.6),
+					gte(
+						sql`1 - (${cosineDistance(assetSummary.embeddings, embed)})`,
+						0.6,
+					),
 				),
 			)) as { id: string; title: string; summary: string; url: string }[];
 
