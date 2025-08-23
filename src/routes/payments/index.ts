@@ -143,9 +143,26 @@ export default function (
 				? "price_1RwmCnIm8TXXTMNzL291RFkL"
 				: "price_1RwmRkI8ev3lBpW60EMaug3I";
 
+		const { data } = await fastify.stripe.customers.list({
+			email: request.user!.email,
+		});
+		const stripeCustomer = data?.[0];
+
+		if (stripeCustomer) {
+			const { data } = await fastify.stripe.subscriptions.list({
+				customer: stripeCustomer.id,
+				price: baseSubscriptionPriceId,
+			});
+
+			if (data.find((d) => d.status !== "canceled" && d.status !== "paused")) {
+				return reply.status(400).send({ error: "Active subscription found" });
+			}
+		}
+
 		const session = await fastify.stripe.checkout.sessions.create({
 			client_reference_id: request.user!.id,
 			customer_email: request.user!.email,
+			customer: stripeCustomer?.id,
 			mode: "subscription",
 			line_items: [
 				{
