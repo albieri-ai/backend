@@ -121,7 +121,8 @@ export default function (
 					)
 					.leftJoin(fileAssets, eq(fileAssets.asset, trainingAssets.id))
 					.leftJoin(files, eq(files.id, fileAssets.fileId))
-					.leftJoin(webPageAssets, eq(webPageAssets.asset, trainingAssets.id)),
+					.leftJoin(webPageAssets, eq(webPageAssets.asset, trainingAssets.id))
+					.where(eq(trainingAssets.persona, request.persona!.id)),
 			);
 
 			let orderFn = [asc(assetList.name)];

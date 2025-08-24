@@ -82,7 +82,7 @@ export default function (
 		});
 	});
 
-	fastify.post("/billing/session", async (request, reply) => {
+	fastify.get("/billing/session", async (request, reply) => {
 		const organization = await fastify.db.query.members.findFirst({
 			columns: {},
 			with: {
@@ -119,7 +119,10 @@ export default function (
 		const session = await fastify.stripe.billingPortal.sessions.create({
 			customer: stripeCustomer.stripeId,
 			return_url: `${fastify.config.APP_URL}/u/${organization.organization.slug}`,
+			locale: "pt-BR",
 		});
+
+		reply.header("cache-control", "private, max-age=30");
 
 		return reply.send({ data: { url: session.url } });
 	});
@@ -177,6 +180,7 @@ export default function (
 				},
 			],
 			ui_mode: "hosted",
+			locale: "pt-BR",
 			success_url: `${fastify.config.APP_URL}/onboarding/comecar`,
 		});
 

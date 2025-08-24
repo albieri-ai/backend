@@ -19,7 +19,7 @@ import {
 	isNotNull,
 	sql,
 } from "drizzle-orm";
-import { embed, UIMessage } from "ai";
+import { embed, type UIMessage } from "ai";
 
 const aiPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 	const gemini = createGoogleGenerativeAI({

@@ -19,7 +19,7 @@ import type { createGoogleGenerativeAI } from "@ai-sdk/google";
 import type { createGroq } from "@ai-sdk/groq";
 import type { createOpenAI } from "@ai-sdk/openai";
 import type Stripe from "stripe";
-import { UIMessage } from "ai";
+import type { UIMessage } from "ai";
 
 async function createServer() {
 	const server = fastify({
@@ -61,6 +61,7 @@ async function createServer() {
 				"APP_URL",
 				"STRIPE_WEBHOOK_SECRET",
 				"APP_ENV",
+				"RESEND_API_KEY",
 			],
 			properties: {
 				PORT: {
@@ -109,6 +110,9 @@ async function createServer() {
 				APP_URL: {
 					type: "string",
 				},
+				RESEND_API_KEY: {
+					type: "string",
+				},
 			},
 		},
 	});
@@ -149,6 +153,7 @@ declare module "fastify" {
 			APP_URL: string;
 			STRIPE_WEBHOOK_SECRET: string;
 			APP_ENV: string;
+			RESEND_API_KEY: string;
 		};
 		db: NodePgDatabase<typeof schema> & { $client: pg.Client };
 		auth: typeof auth;
