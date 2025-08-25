@@ -2,12 +2,14 @@ import type { FastifyInstance, FastifyServerOptions } from "fastify";
 import { adminOnly } from "../../../../lib/adminOnly";
 import { threads, userMessages, users } from "../../../../database/schema";
 import {
+	and,
 	asc,
 	count,
 	countDistinct,
 	desc,
 	eq,
 	isNotNull,
+	isNull,
 	max,
 	min,
 	sum,
@@ -186,6 +188,101 @@ export default function (
 					pageSize: request.query.limit,
 					nextPage: hasNextPage ? request.query.page + 1 : null,
 					previousPage: hasPreviousPage ? request.query.page - 1 : null,
+				},
+			});
+		},
+	);
+
+	fastify.get<{
+		Querystring: {
+			page: number;
+			limit: number;
+			orderBy: "createdAt:desc" | "createdAt:asc";
+		};
+		Params: { slug: string };
+	}>(
+		"/threads",
+		{
+			schema: {
+				querystring: z.object({
+					page: z.coerce.number().int().positive().default(1),
+					limit: z.coerce.number().int().positive().default(10),
+					orderBy: z
+						.enum(["createdAt:desc", "createdAt:asc"])
+						.default("createdAt:desc"),
+				}),
+			},
+			preHandler: [adminOnly(fastify)],
+		},
+		async (request, reply) => {
+			const { persona } = request;
+
+			if (!persona?.id) {
+				return reply.status(404).send({ error: "Persona not found" });
+			}
+
+			const memberThreads = await fastify.db.query.threads.findMany({
+				columns: {
+					persona: false,
+					author: false,
+					messages: false,
+					model: false,
+					deletedAt: false,
+					deletedBy: false,
+				},
+				with: {
+					persona: {
+						columns: {
+							id: true,
+							name: true,
+							slug: true,
+						},
+					},
+					author: {
+						columns: {
+							id: true,
+							name: true,
+							isAnonymous: true,
+						},
+					},
+				},
+				where: (p, { eq, and, isNull }) =>
+					and(eq(p.persona, persona.id), isNull(p.deletedAt)),
+				orderBy: (p, { desc, asc }) => {
+					if (request.query.orderBy === "createdAt:desc") {
+						return desc(p.createdAt);
+					}
+					return asc(p.createdAt);
+				},
+				limit: request.query.limit,
+				offset: (request.query.page - 1) * request.query.limit,
+			});
+
+			const threadCount = await fastify.db
+				.select({ count: count().as("count") })
+				.from(threads)
+				.where(and(eq(threads.persona, persona.id), isNull(threads.deletedAt)))
+				.then((res) => res?.[0]?.count);
+			const hasNextPage =
+				threadCount > request.query.limit * request.query.page;
+			const previousPage = Math.min(
+				request.query.page - 1,
+				Math.ceil(threadCount / request.query.limit),
+			);
+			const hasPreviousPage =
+				previousPage > 0 && previousPage < request.query.page;
+
+			return reply.send({
+				data: memberThreads,
+				pagination: {
+					pagination: {
+						totalRecords: threadCount,
+						totalPages: Math.ceil(threadCount / request.query.limit),
+						currentPage: request.query.page,
+						pageSize: request.query.limit,
+						nextPage: hasNextPage ? request.query.page + 1 : null,
+						previousPage: hasPreviousPage ? request.query.page - 1 : null,
+					},
 				},
 			});
 		},

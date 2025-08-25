@@ -27,6 +27,12 @@ const authPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 				},
 			},
 		},
+		session: {
+			cookieCache: {
+				enabled: true,
+				maxAge: 5 * 60,
+			},
+		},
 		advanced: {
 			database: {
 				generateId: createId,
