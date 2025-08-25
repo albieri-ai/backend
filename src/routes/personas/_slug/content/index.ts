@@ -12,11 +12,24 @@ import {
 	webPageAssets,
 } from "../../../../database/schema";
 import { personas } from "../../../../database/schema";
-import { and, isNull, eq, sql, count, asc, desc, ilike } from "drizzle-orm";
+import {
+	and,
+	isNull,
+	eq,
+	sql,
+	count,
+	asc,
+	desc,
+	ilike,
+	inArray,
+} from "drizzle-orm";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { z } from "zod";
-import { youtubeChannels } from "../../../../database/schema/youtube";
+import {
+	youtubeChannels,
+	youtubeChannelsVideos,
+} from "../../../../database/schema/youtube";
 import {
 	MonitorYoutubeChannel,
 	MonitorYoutubeChannelSchedule,
@@ -122,7 +135,12 @@ export default function (
 					.leftJoin(fileAssets, eq(fileAssets.asset, trainingAssets.id))
 					.leftJoin(files, eq(files.id, fileAssets.fileId))
 					.leftJoin(webPageAssets, eq(webPageAssets.asset, trainingAssets.id))
-					.where(eq(trainingAssets.persona, request.persona!.id)),
+					.where(
+						and(
+							eq(trainingAssets.persona, request.persona!.id),
+							isNull(trainingAssets.deletedAt),
+						),
+					),
 			);
 
 			let orderFn = [asc(assetList.name)];
@@ -469,7 +487,12 @@ export default function (
 			const updatedAsset = await fastify.db
 				.update(trainingAssets)
 				.set(request.body)
-				.where(and(eq(trainingAssets.id, request.params.id)))
+				.where(
+					and(
+						eq(trainingAssets.id, request.params.id),
+						isNull(trainingAssets.deletedAt),
+					),
+				)
 				.returning()
 				.then(([res]) => res);
 
@@ -583,6 +606,9 @@ export default function (
 			slug: string;
 			accountId: string;
 		};
+		Querystring: {
+			remove_content: boolean;
+		};
 	}>(
 		"/accounts/youtube/:accountId",
 		{
@@ -590,6 +616,9 @@ export default function (
 				params: z.object({
 					slug: z.string(),
 					accountId: z.string(),
+				}),
+				querystring: z.object({
+					remove_content: z.coerce.boolean().default(false),
 				}),
 			},
 			preHandler: [adminOnly(fastify)],
@@ -599,38 +628,63 @@ export default function (
 				return reply.unauthorized();
 			}
 
-			const [persona] = await fastify.db
-				.select()
-				.from(personas)
-				.where(
-					and(
-						eq(personas.slug, request.params.slug),
-						isNull(personas.deletedAt),
-					),
-				);
+			const { persona } = request;
 
-			const channel = await fastify.db
-				.select()
-				.from(youtubeChannels)
-				.where(eq(youtubeChannels.id, request.params.accountId))
-				.then(([res]) => res);
-
-			await fastify.db
-				.update(youtubeChannels)
-				.set({
-					disabledAt: sql`NOW()`,
-				})
-				.where(
-					and(
-						eq(youtubeChannels.id, request.params.accountId),
-						eq(youtubeChannels.persona, persona.id),
-						isNull(youtubeChannels.disabledAt),
-					),
-				);
-
-			if (channel.triggerId) {
-				await schedules.deactivate(channel.triggerId);
+			if (!persona) {
+				return reply.status(404).send({ error: "Persona not found" });
 			}
+
+			await fastify.db.transaction(async (trx) => {
+				const channel = await trx
+					.select()
+					.from(youtubeChannels)
+					.where(eq(youtubeChannels.id, request.params.accountId))
+					.then(([res]) => res);
+
+				await trx
+					.update(youtubeChannels)
+					.set({
+						disabledAt: sql`NOW()`,
+					})
+					.where(
+						and(
+							eq(youtubeChannels.id, request.params.accountId),
+							eq(youtubeChannels.persona, persona.id),
+							isNull(youtubeChannels.disabledAt),
+						),
+					);
+
+				if (channel.triggerId) {
+					await schedules.deactivate(channel.triggerId);
+				}
+
+				if (request.query.remove_content) {
+					await trx
+						.update(trainingAssets)
+						.set({ deletedAt: sql`NOW()`, deletedBy: request.user!.id })
+						.where(
+							and(
+								isNull(trainingAssets.deletedAt),
+								inArray(
+									trainingAssets.id,
+									trx
+										.select({ id: youtubeVideoAssets.asset })
+										.from(youtubeVideoAssets)
+										.leftJoin(
+											youtubeChannelsVideos,
+											eq(youtubeChannelsVideos.id, youtubeVideoAssets.videoId),
+										)
+										.where(
+											eq(
+												youtubeChannelsVideos.channel,
+												request.params.accountId,
+											),
+										),
+								),
+							),
+						);
+				}
+			});
 
 			return reply.status(204).send();
 		},

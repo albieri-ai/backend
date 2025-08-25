@@ -45,6 +45,9 @@ export const trainingAssets = pgTable(
 			.references(() => users.id, { onDelete: "cascade" }),
 
 		createdAt: timestamp().defaultNow(),
+
+		deletedBy: text().references(() => users.id, { onDelete: "cascade" }),
+		deletedAt: timestamp(),
 	},
 	(table) => ({
 		trainigAssetsPersonaIdx: index().on(table.persona, table.enabled),

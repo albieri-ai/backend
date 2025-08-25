@@ -17,6 +17,7 @@ import {
 	gte,
 	inArray,
 	isNotNull,
+	isNull,
 	sql,
 } from "drizzle-orm";
 import { embed, type UIMessage } from "ai";
@@ -41,6 +42,7 @@ const aiPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 			.leftJoin(assetSummary, eq(assetSummary.asset, trainingAssets.id))
 			.where(
 				and(
+					isNull(trainingAssets.deletedAt),
 					eq(trainingAssets.persona, persona),
 					eq(trainingAssets.enabled, true),
 					gte(summarySimilarity, 0.6),
@@ -59,6 +61,7 @@ const aiPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 				.leftJoin(assetSummary, eq(assetSummary.asset, trainingAssets.id))
 				.where(
 					and(
+						isNull(trainingAssets.deletedAt),
 						inArray(
 							assetChunks.asset,
 							similarAssets.map((s) => s.id),
@@ -86,7 +89,13 @@ const aiPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 			.leftJoin(trainingAssets, eq(trainingAssets.id, assetChunks.asset))
 			.leftJoin(assetSummary, eq(assetSummary.asset, trainingAssets.id))
 			.where(
-				gte(sql`1 - (${cosineDistance(assetSummary.embeddings, embed)})`, 0.5),
+				and(
+					isNull(trainingAssets.deletedAt),
+					gte(
+						sql`1 - (${cosineDistance(assetSummary.embeddings, embed)})`,
+						0.5,
+					),
+				),
 			)
 			.orderBy(
 				desc(sql`1 - (${cosineDistance(assetSummary.embeddings, embed)})`),
@@ -116,6 +125,7 @@ const aiPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 				and(
 					and(
 						isNotNull(youtubeVideoAssets.url),
+						isNull(trainingAssets.deletedAt),
 						eq(trainingAssets.persona, persona),
 						eq(trainingAssets.enabled, true),
 					),
@@ -147,6 +157,7 @@ const aiPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 			.where(
 				and(
 					isNotNull(youtubeVideoAssets.url),
+					isNull(trainingAssets.deletedAt),
 					inArray(
 						assetChunks.asset,
 						similarAssets.map((s) => s.id),
@@ -223,5 +234,5 @@ const aiPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 export default fp(aiPlugin, {
 	name: "ai",
 	fastify: ">=4.0.0",
-	dependencies: ["@fastify/env"],
+	dependencies: ["@fastify/env", "database"],
 });
