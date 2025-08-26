@@ -426,41 +426,47 @@ export const MonitorYoutubeChannelSchedule = schedules.task({
 					return acc;
 				}, {});
 
-				const videoRecords = await trx
-					.insert(youtubeVideoAssets)
-					.values(
-						newVideos.map((v, index) => ({
-							asset: assets[index].id,
-							url: `https://www.youtube.com/watch?v=${v.videoId}`,
-							title: v.title || "Título não disponível",
-							videoId: v.videoId,
-							channelVideo: channelVideoIdMap[v.videoId],
-						})),
-					)
-					.returning();
+				if (newVideos.length) {
+					const videoRecords = await trx
+						.insert(youtubeVideoAssets)
+						.values(
+							newVideos.map((v, index) => ({
+								asset: assets[index].id,
+								url: `https://www.youtube.com/watch?v=${v.videoId}`,
+								title: v.title || "Título não disponível",
+								videoId: v.videoId,
+								channelVideo: channelVideoIdMap[v.videoId],
+							})),
+						)
+						.returning();
 
-				if (previousUploadedVideosWithoutChannelId.length) {
-					for (const vid of previousUploadedVideosWithoutChannelId) {
-						await trx
-							.update(youtubeVideoAssets)
-							.set({
-								channelVideo: channelVideoIdMap[vid.videoId],
-							})
-							.where(eq(youtubeVideoAssets.id, vid.id));
+					if (previousUploadedVideosWithoutChannelId.length) {
+						for (const vid of previousUploadedVideosWithoutChannelId) {
+							await trx
+								.update(youtubeVideoAssets)
+								.set({
+									channelVideo: channelVideoIdMap[vid.videoId],
+								})
+								.where(eq(youtubeVideoAssets.id, vid.id));
+						}
 					}
+
+					return videoRecords;
 				}
 
-				return videoRecords;
+				return [];
 			});
 
-			await IngestYoutubeVideo.batchTrigger(
-				videoRecords.map((vid) => ({
-					payload: {
-						assetID: vid.asset,
-						url: vid.url,
-					},
-				})),
-			);
+			if (videoRecords.length) {
+				await IngestYoutubeVideo.batchTrigger(
+					videoRecords.map((vid) => ({
+						payload: {
+							assetID: vid.asset,
+							url: vid.url,
+						},
+					})),
+				);
+			}
 		}
 	},
 });

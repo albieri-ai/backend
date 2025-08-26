@@ -2,13 +2,14 @@ import type { FastifyInstance, FastifyServerOptions } from "fastify";
 import { adminOnly } from "../../../../../../lib/adminOnly";
 import z from "zod";
 import {
+	hotmartCourseLessonCount,
 	hotmartCourseLessons,
 	hotmartCourseModules,
 	hotmartCourses,
 	hotmartVideoAssets,
 	trainingAssets,
 } from "../../../../../../database/schema";
-import { eq, and, isNull, sql, inArray } from "drizzle-orm";
+import { eq, and, isNull, sql, inArray, getTableColumns } from "drizzle-orm";
 import { HotmartCourseImport } from "../../../../../../trigger/hotmart";
 import axios from "axios";
 
@@ -16,11 +17,38 @@ export default function (
 	fastify: FastifyInstance,
 	_opts: FastifyServerOptions,
 ) {
+	fastify.get<{ Params: { slug: string } }>(
+		"/",
+		{
+			preHandler: [adminOnly(fastify)],
+		},
+		async (request, reply) => {
+			const courses = await fastify.db
+				.select({
+					...getTableColumns(hotmartCourses),
+					lessonCount: hotmartCourseLessonCount.count,
+				})
+				.from(hotmartCourses)
+				.leftJoin(
+					hotmartCourseLessonCount,
+					eq(hotmartCourseLessonCount.course, hotmartCourses.id),
+				)
+				.where(
+					and(
+						eq(hotmartCourses.persona, request.persona!.id),
+						isNull(hotmartCourses.disabledAt),
+					),
+				);
+
+			return reply.send({ data: courses });
+		},
+	);
+
 	fastify.post<{
 		Params: { slug: string };
 		Body: { token: string; hotmartId: string };
 	}>(
-		"/accounts/hotmart",
+		"/",
 		{
 			schema: {
 				params: z.object({
@@ -112,7 +140,7 @@ export default function (
 			remove_content: boolean;
 		};
 	}>(
-		"/accounts/hotmart/:courseId",
+		"/:courseId",
 		{
 			schema: {
 				params: z.object({

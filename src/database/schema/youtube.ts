@@ -6,10 +6,12 @@ import {
 	uniqueIndex,
 	varchar,
 	boolean,
+	pgView,
 } from "drizzle-orm/pg-core";
 import { personas } from "./personas";
 import { users } from "./auth";
 import { createId } from "@paralleldrive/cuid2";
+import { count } from "drizzle-orm";
 
 export const youtubeChannels = pgTable(
 	"youtube_channels",
@@ -51,4 +53,16 @@ export const youtubeChannelsVideos = pgTable(
 	(table) => ({
 		youtubeChannelsVideoIdIdx: uniqueIndex().on(table.channel, table.videoId),
 	}),
+);
+
+export const youtubeChannelsVideoCount = pgView(
+	"youtube_channels_video_count",
+).as((qb) =>
+	qb
+		.select({
+			channel: youtubeChannelsVideos.channel,
+			count: count(youtubeChannelsVideos.id).as("count"),
+		})
+		.from(youtubeChannelsVideos)
+		.groupBy(youtubeChannelsVideos.channel),
 );

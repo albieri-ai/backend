@@ -1,4 +1,5 @@
 import { defineConfig } from "@trigger.dev/sdk";
+import { ffmpeg } from "@trigger.dev/build/extensions/core";
 
 export default defineConfig({
   project: "proj_efvkmmgpvuwvpribfoai",
@@ -8,6 +9,10 @@ export default defineConfig({
   // You can override this on an individual task.
   // See https://trigger.dev/docs/runs/max-duration
   maxDuration: 3600,
+  build: {
+		extensions: [ffmpeg()],
+		external: ["fluent-ffmpeg", "pdf-parse"],
+	},
   retries: {
     enabledInDev: true,
     default: {

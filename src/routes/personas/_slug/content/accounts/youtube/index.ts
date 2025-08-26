@@ -4,10 +4,11 @@ import {
 	youtubeVideoAssets,
 } from "../../../../../../database/schema";
 import { personas } from "../../../../../../database/schema";
-import { and, isNull, eq, sql, inArray } from "drizzle-orm";
+import { and, isNull, eq, sql, inArray, getTableColumns } from "drizzle-orm";
 import { z } from "zod";
 import {
 	youtubeChannels,
+	youtubeChannelsVideoCount,
 	youtubeChannelsVideos,
 } from "../../../../../../database/schema/youtube";
 import {
@@ -22,14 +23,21 @@ export default function (
 	_opts: FastifyServerOptions,
 ) {
 	fastify.get<{ Params: { slug: string } }>(
-		"",
+		"/",
 		{
 			preHandler: [adminOnly(fastify)],
 		},
 		async (request, reply) => {
 			const channels = await fastify.db
-				.select()
+				.select({
+					...getTableColumns(youtubeChannels),
+					videoCount: youtubeChannelsVideoCount.count,
+				})
 				.from(youtubeChannels)
+				.leftJoin(
+					youtubeChannelsVideoCount,
+					eq(youtubeChannelsVideoCount.channel, youtubeChannels.id),
+				)
 				.where(
 					and(
 						eq(youtubeChannels.persona, request.persona!.id),

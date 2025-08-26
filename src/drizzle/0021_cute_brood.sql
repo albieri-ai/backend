@@ -1,0 +1,2 @@
+CREATE VIEW "public"."hotmart_course_lesson_count" AS (select "hotmart_course_modules"."course", count("hotmart_course_lessons"."id") as "count" from "hotmart_course_lessons" left join "hotmart_course_modules" on "hotmart_course_modules"."id" = "hotmart_course_lessons"."module" group by "hotmart_course_modules"."course");--> statement-breakpoint
+CREATE VIEW "public"."youtube_channels_video_count" AS (select "channel", count("id") as "count" from "youtube_channels_videos" group by "youtube_channels_videos"."channel");
