@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyServerOptions } from "fastify";
-import { adminOnly } from "../../../../lib/adminOnly";
+import { adminOnly } from "../../../../../../lib/adminOnly";
 import z from "zod";
 import {
 	hotmartCourseLessons,
@@ -7,9 +7,9 @@ import {
 	hotmartCourses,
 	hotmartVideoAssets,
 	trainingAssets,
-} from "../../../../database/schema";
+} from "../../../../../../database/schema";
 import { eq, and, isNull, sql, inArray } from "drizzle-orm";
-import { HotmartCourseImport } from "../../../../trigger/hotmart";
+import { HotmartCourseImport } from "../../../../../../trigger/hotmart";
 import axios from "axios";
 
 export default function (

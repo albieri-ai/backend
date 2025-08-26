@@ -78,7 +78,9 @@ export default function (
 			},
 		},
 		async (request, reply) => {
+			console.log("aqui");
 			const persona = await getPersonaBySlug(request.params.slug);
+			console.log("persona: ", persona);
 
 			if (!persona) {
 				return reply.callNotFound();

@@ -1,157 +1,38 @@
 import type { FastifyInstance, FastifyServerOptions } from "fastify";
-import { IngestYoutubeVideo } from "../../../../trigger/ingest";
 import {
 	trainingAssets,
 	youtubeVideoAssets,
-} from "../../../../database/schema";
-import { personas } from "../../../../database/schema";
+} from "../../../../../../database/schema";
+import { personas } from "../../../../../../database/schema";
 import { and, isNull, eq, sql, inArray } from "drizzle-orm";
 import { z } from "zod";
 import {
 	youtubeChannels,
 	youtubeChannelsVideos,
-} from "../../../../database/schema/youtube";
+} from "../../../../../../database/schema/youtube";
 import {
 	MonitorYoutubeChannel,
 	MonitorYoutubeChannelSchedule,
-} from "../../../../trigger/youtube";
+} from "../../../../../../trigger/youtube";
 import { schedules } from "@trigger.dev/sdk";
-import axios from "axios";
-import { adminOnly } from "../../../../lib/adminOnly";
-
-function extractYouTubeVideoId(urlString: string): string | null {
-	try {
-		const url = new URL(urlString);
-		const hostname = url.hostname.replace(/^www\./, "");
-
-		if (hostname === "youtu.be") {
-			// Shortened URL: youtu.be/VIDEO_ID
-			return url.pathname.slice(1);
-		}
-
-		if (
-			hostname === "youtube.com" ||
-			hostname === "m.youtube.com" ||
-			hostname === "music.youtube.com"
-		) {
-			const path = url.pathname;
-
-			// Standard URL: /watch?v=VIDEO_ID
-			if (path === "/watch") {
-				return url.searchParams.get("v");
-			}
-
-			// Embed URL: /embed/VIDEO_ID
-			if (path.startsWith("/embed/")) {
-				return path.split("/")[2];
-			}
-
-			// Shorts URL: /shorts/VIDEO_ID
-			if (path.startsWith("/shorts/")) {
-				return path.split("/")[2];
-			}
-		}
-
-		return null; // Not a recognized video URL
-	} catch {
-		return null; // Invalid URL
-	}
-}
+import { adminOnly } from "../../../../../../lib/adminOnly";
 
 export default function (
 	fastify: FastifyInstance,
 	_opts: FastifyServerOptions,
 ) {
-	fastify.post<{ Params: { slug: string }; Body: { url: string } }>(
-		"/assets/youtube-video",
-		{
-			schema: {
-				params: z.object({
-					slug: z.string(),
-				}),
-				body: z.object({
-					url: z.string().url(),
-				}),
-			},
-			preHandler: [adminOnly(fastify)],
-		},
-		async (request, reply) => {
-			const [persona] = await fastify.db
-				.select()
-				.from(personas)
-				.where(
-					and(
-						eq(personas.slug, request.params.slug),
-						isNull(personas.deletedAt),
-					),
-				);
-
-			const asset = await fastify.db.transaction(async (trx) => {
-				const asset = await trx
-					.insert(trainingAssets)
-					.values({
-						type: "youtube_video",
-						status: "pending",
-						enabled: true,
-						persona: persona.id,
-						createdBy: request.user!.id,
-					})
-					.returning({ id: trainingAssets.id })
-					.then(([res]) => res);
-
-				const videoId = extractYouTubeVideoId(request.body.url);
-
-				if (!videoId) {
-					throw new Error("invalid url");
-				}
-
-				const { data } = await axios.get(
-					`https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&key=${process.env.YOUTUBE_API_KEY}`,
-				);
-
-				const title = data.items[0].snippet.title;
-
-				await trx.insert(youtubeVideoAssets).values({
-					asset: asset.id,
-					url: request.body.url,
-					title,
-					videoId,
-				});
-
-				return { id: asset.id, url: request.body.url };
-			});
-
-			await IngestYoutubeVideo.trigger({
-				assetID: asset.id,
-				url: asset.url,
-			});
-
-			reply.code(204).send();
-		},
-	);
-
 	fastify.get<{ Params: { slug: string } }>(
-		"/accounts/youtube",
+		"",
 		{
 			preHandler: [adminOnly(fastify)],
 		},
 		async (request, reply) => {
-			const [persona] = await fastify.db
-				.select()
-				.from(personas)
-				.where(
-					and(
-						eq(personas.slug, request.params.slug),
-						isNull(personas.deletedAt),
-					),
-				);
-
 			const channels = await fastify.db
 				.select()
 				.from(youtubeChannels)
 				.where(
 					and(
-						eq(youtubeChannels.persona, persona.id),
+						eq(youtubeChannels.persona, request.persona!.id),
 						isNull(youtubeChannels.disabledAt),
 					),
 				);
@@ -164,7 +45,7 @@ export default function (
 		Params: { slug: string };
 		Body: { url: string; keepSynced: boolean };
 	}>(
-		"/accounts/youtube",
+		"",
 		{
 			schema: {
 				params: z.object({
@@ -178,21 +59,17 @@ export default function (
 			preHandler: [adminOnly(fastify)],
 		},
 		async (request, reply) => {
-			const [persona] = await fastify.db
-				.select()
-				.from(personas)
-				.where(
-					and(
-						eq(personas.slug, request.params.slug),
-						isNull(personas.deletedAt),
-					),
-				);
+			const { persona } = request;
+
+			if (!persona) {
+				return reply.status(404).send({ error: "Persona not found" });
+			}
 
 			const channel = await fastify.db.transaction(async (trx) => {
 				const [channel] = await trx
 					.insert(youtubeChannels)
 					.values({
-						persona: persona.id,
+						persona: request.persona!.id,
 						url: request.body.url,
 						keepSynced: request.body.keepSynced,
 						createdBy: request.user!.id,
@@ -244,7 +121,7 @@ export default function (
 			keepSynced: boolean;
 		};
 	}>(
-		"/accounts/youtube/:accountId",
+		"/:accountId",
 		{
 			schema: {
 				params: z.object({
@@ -339,7 +216,7 @@ export default function (
 			remove_content: boolean;
 		};
 	}>(
-		"/accounts/youtube/:accountId",
+		"/:accountId",
 		{
 			schema: {
 				params: z.object({

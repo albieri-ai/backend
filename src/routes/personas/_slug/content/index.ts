@@ -1,11 +1,17 @@
 import type { FastifyInstance, FastifyServerOptions } from "fastify";
-import { IngestPdfDocument, IngestVideoFile } from "../../../../trigger/ingest";
+import {
+	IngestPdfDocument,
+	IngestVideoFile,
+	IngestYoutubeVideo,
+} from "../../../../trigger/ingest";
 import {
 	trainingAssets,
 	youtubeVideoAssets,
 	fileAssets,
 	files,
 	webPageAssets,
+	hotmartVideoAssets,
+	hotmartCourseLessons,
 } from "../../../../database/schema";
 import { personas } from "../../../../database/schema";
 import { and, isNull, eq, sql, count, asc, desc, ilike } from "drizzle-orm";
@@ -14,6 +20,7 @@ import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { z } from "zod";
 import { PersonaBySlugSchema } from "..";
 import { adminOnly } from "../../../../lib/adminOnly";
+import axios from "axios";
 
 const ListAssetSchema = z.object({
 	page: z.coerce.number().int().positive().default(1),
@@ -31,6 +38,45 @@ const ListAssetSchema = z.object({
 		.optional()
 		.default("name:asc"),
 });
+
+function extractYouTubeVideoId(urlString: string): string | null {
+	try {
+		const url = new URL(urlString);
+		const hostname = url.hostname.replace(/^www\./, "");
+
+		if (hostname === "youtu.be") {
+			// Shortened URL: youtu.be/VIDEO_ID
+			return url.pathname.slice(1);
+		}
+
+		if (
+			hostname === "youtube.com" ||
+			hostname === "m.youtube.com" ||
+			hostname === "music.youtube.com"
+		) {
+			const path = url.pathname;
+
+			// Standard URL: /watch?v=VIDEO_ID
+			if (path === "/watch") {
+				return url.searchParams.get("v");
+			}
+
+			// Embed URL: /embed/VIDEO_ID
+			if (path.startsWith("/embed/")) {
+				return path.split("/")[2];
+			}
+
+			// Shorts URL: /shorts/VIDEO_ID
+			if (path.startsWith("/shorts/")) {
+				return path.split("/")[2];
+			}
+		}
+
+		return null; // Not a recognized video URL
+	} catch {
+		return null; // Invalid URL
+	}
+}
 
 export default function (
 	fastify: FastifyInstance,
@@ -57,7 +103,7 @@ export default function (
 					.select({
 						id: trainingAssets.id,
 						source: trainingAssets.type,
-						name: sql`COALESCE(${youtubeVideoAssets.title}, ${files.originalName}, ${files.name}, ${webPageAssets.title})`.as(
+						name: sql`COALESCE(${youtubeVideoAssets.title}, ${files.originalName}, ${files.name}, ${webPageAssets.title}, ${hotmartCourseLessons.name})`.as(
 							"name",
 						),
 						enabled: trainingAssets.enabled,
@@ -72,6 +118,14 @@ export default function (
 					.leftJoin(fileAssets, eq(fileAssets.asset, trainingAssets.id))
 					.leftJoin(files, eq(files.id, fileAssets.fileId))
 					.leftJoin(webPageAssets, eq(webPageAssets.asset, trainingAssets.id))
+					.leftJoin(
+						hotmartVideoAssets,
+						eq(hotmartVideoAssets.asset, trainingAssets.id),
+					)
+					.leftJoin(
+						hotmartCourseLessons,
+						eq(hotmartCourseLessons.id, hotmartVideoAssets.lesson),
+					)
 					.where(
 						and(
 							eq(trainingAssets.persona, request.persona!.id),
@@ -272,6 +326,74 @@ export default function (
 			reply.send({
 				data: updatedAsset,
 			});
+		},
+	);
+
+	fastify.post<{ Params: { slug: string }; Body: { url: string } }>(
+		"/assets/youtube-video",
+		{
+			schema: {
+				params: z.object({
+					slug: z.string(),
+				}),
+				body: z.object({
+					url: z.string().url(),
+				}),
+			},
+			preHandler: [adminOnly(fastify)],
+		},
+		async (request, reply) => {
+			const [persona] = await fastify.db
+				.select()
+				.from(personas)
+				.where(
+					and(
+						eq(personas.slug, request.params.slug),
+						isNull(personas.deletedAt),
+					),
+				);
+
+			const asset = await fastify.db.transaction(async (trx) => {
+				const asset = await trx
+					.insert(trainingAssets)
+					.values({
+						type: "youtube_video",
+						status: "pending",
+						enabled: true,
+						persona: persona.id,
+						createdBy: request.user!.id,
+					})
+					.returning({ id: trainingAssets.id })
+					.then(([res]) => res);
+
+				const videoId = extractYouTubeVideoId(request.body.url);
+
+				if (!videoId) {
+					throw new Error("invalid url");
+				}
+
+				const { data } = await axios.get(
+					`https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&key=${process.env.YOUTUBE_API_KEY}`,
+				);
+
+				const title = data.items[0].snippet.title;
+
+				await trx.insert(youtubeVideoAssets).values({
+					asset: asset.id,
+					url: request.body.url,
+					title,
+					videoId,
+				});
+
+				return { id: asset.id, url: request.body.url };
+			});
+
+			await IngestYoutubeVideo.trigger({
+				assetID: asset.id,
+				url: asset.url,
+			});
+
+			reply.code(204).send();
 		},
 	);
 }
