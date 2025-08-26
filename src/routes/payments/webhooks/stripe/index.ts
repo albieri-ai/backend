@@ -9,7 +9,7 @@ import {
 } from "../../../../database/schema";
 import { eq } from "drizzle-orm";
 import { TrackSubscriptionUsage } from "../../../../trigger/subscription";
-import { schedules } from "@trigger.dev/sdk/v3";
+import { schedules } from "@trigger.dev/sdk";
 
 export default function (
 	fastify: FastifyInstance,

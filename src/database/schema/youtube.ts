@@ -28,6 +28,7 @@ export const youtubeChannels = pgTable(
 		createdBy: text()
 			.notNull()
 			.references(() => users.id, { onDelete: "set null" }),
+		disabledBy: text().references(() => users.id, { onDelete: "set null" }),
 		createdAt: timestamp().defaultNow(),
 		disabledAt: timestamp(),
 	},

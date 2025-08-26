@@ -1,4 +1,4 @@
-import { logger, schedules, task } from "@trigger.dev/sdk/v3";
+import { schedules, task } from "@trigger.dev/sdk";
 import axios from "axios";
 import { createDb } from "../database/db";
 import {
@@ -224,13 +224,13 @@ export const MonitorYoutubeChannel = task({
 				return videoRecords;
 			});
 
-			await Promise.all(
-				videoRecords.map((vid) => {
-					IngestYoutubeVideo.trigger({
+			await IngestYoutubeVideo.batchTrigger(
+				videoRecords.map((vid) => ({
+					payload: {
 						assetID: vid.asset,
 						url: vid.url,
-					});
-				}),
+					},
+				})),
 			);
 		}
 	},
@@ -453,13 +453,13 @@ export const MonitorYoutubeChannelSchedule = schedules.task({
 				return videoRecords;
 			});
 
-			await Promise.all(
-				videoRecords.map((vid) => {
-					IngestYoutubeVideo.trigger({
+			await IngestYoutubeVideo.batchTrigger(
+				videoRecords.map((vid) => ({
+					payload: {
 						assetID: vid.asset,
 						url: vid.url,
-					});
-				}),
+					},
+				})),
 			);
 		}
 	},

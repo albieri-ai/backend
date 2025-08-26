@@ -15,6 +15,7 @@ import { users } from "./auth";
 import { files } from "./storage";
 import { youtubeChannelsVideos } from "./youtube";
 import { createId } from "@paralleldrive/cuid2";
+import { hotmartCourseLessons } from "./hotmart";
 
 export const TrainingAssetType = pgEnum("training_asset_type", [
 	"file",
@@ -72,6 +73,18 @@ export const youtubeVideoAssets = pgTable(
 		youtubeVideoAssetsAssetIdx: index().on(table.asset),
 	}),
 );
+
+export const hotmartVideoAssets = pgTable("hotmart_video_assets", {
+	id: serial().primaryKey(),
+	asset: text()
+		.notNull()
+		.references(() => trainingAssets.id, { onDelete: "cascade" }),
+	lesson: text().references(() => hotmartCourseLessons.id, {
+		onDelete: "cascade",
+	}),
+	hotmartId: text().notNull(),
+	name: text().notNull(),
+});
 
 export const fileAssets = pgTable(
 	"file_assets",

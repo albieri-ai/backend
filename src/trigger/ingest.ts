@@ -1,4 +1,4 @@
-import { task, logger } from "@trigger.dev/sdk/v3";
+import { task, logger } from "@trigger.dev/sdk";
 import { createDb } from "../database/db";
 import { YoutubeLoader } from "@langchain/community/document_loaders/web/youtube";
 import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
