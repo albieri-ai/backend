@@ -287,7 +287,10 @@ export default function (
 										.from(youtubeVideoAssets)
 										.leftJoin(
 											youtubeChannelsVideos,
-											eq(youtubeChannelsVideos.id, youtubeVideoAssets.videoId),
+											eq(
+												youtubeChannelsVideos.id,
+												youtubeVideoAssets.channelVideo,
+											),
 										)
 										.where(
 											eq(

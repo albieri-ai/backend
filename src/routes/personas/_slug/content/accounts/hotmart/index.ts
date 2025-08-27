@@ -2,10 +2,10 @@ import type { FastifyInstance, FastifyServerOptions } from "fastify";
 import { adminOnly } from "../../../../../../lib/adminOnly";
 import z from "zod";
 import {
-	hotmartCourseLessonCount,
 	hotmartCourseLessons,
 	hotmartCourseModules,
 	hotmartCourses,
+	hotmartCourseVideoCount,
 	hotmartVideoAssets,
 	trainingAssets,
 } from "../../../../../../database/schema";
@@ -26,19 +26,23 @@ export default function (
 			const courses = await fastify.db
 				.select({
 					...getTableColumns(hotmartCourses),
-					lessonCount: hotmartCourseLessonCount.count,
+					videoCount: hotmartCourseVideoCount.count,
 				})
 				.from(hotmartCourses)
 				.leftJoin(
-					hotmartCourseLessonCount,
-					eq(hotmartCourseLessonCount.course, hotmartCourses.id),
+					hotmartCourseVideoCount,
+					eq(hotmartCourseVideoCount.course, hotmartCourses.id),
 				)
 				.where(
 					and(
 						eq(hotmartCourses.persona, request.persona!.id),
 						isNull(hotmartCourses.disabledAt),
 					),
-				);
+				)
+				.catch((err) => {
+					console.error(err);
+					throw err;
+				});
 
 			return reply.send({ data: courses });
 		},

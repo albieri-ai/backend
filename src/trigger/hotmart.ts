@@ -1,4 +1,4 @@
-import { task, logger } from "@trigger.dev/sdk";
+import { task } from "@trigger.dev/sdk";
 import axios from "axios";
 import { createDb } from "../database/db";
 import {
@@ -30,8 +30,6 @@ export const HotmartCourseImport = task({
 
 		const slug = productInitialData.slug;
 
-		logger.log(`slug: ${slug}`);
-
 		const {
 			data: { name, description, clubSubdomain },
 		} = await axios.get<{
@@ -51,8 +49,6 @@ export const HotmartCourseImport = task({
 				},
 			},
 		);
-
-		logger.log(`${name}: ${description}`);
 
 		const [{ data: normalModules }, { data: extraModules }] = await Promise.all(
 			[
@@ -250,12 +246,14 @@ export const HotmartCourseImport = task({
 				})
 				.returning({
 					id: hotmartCourseLessons.id,
-					hotmartId: hotmartCourseLessons.id,
+					hotmartId: hotmartCourseLessons.hotmartId,
 				});
 
 			const lessonHotmartIdMap = lessons.reduce<Record<string, string>>(
 				(acc, it) => {
-					acc[it.hotmartId] = it.id;
+					if (it.hotmartId) {
+						acc[it.hotmartId] = it.id;
+					}
 
 					return acc;
 				},
@@ -270,8 +268,6 @@ export const HotmartCourseImport = task({
 					hotmartId: media.hotmartId,
 				})),
 			);
-
-			console.log(lessonsContent);
 
 			const mediasAlreadyProcessed = await trx
 				.select({ hotmartId: hotmartVideoAssets.hotmartId })

@@ -8,3 +8,4 @@ export * from "./subscriptions";
 export * from "./threads";
 export * from "./training";
 export * from "./youtube";
+export * from "./views";

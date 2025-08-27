@@ -4,12 +4,10 @@ import {
 	timestamp,
 	boolean,
 	uniqueIndex,
-	pgView,
 } from "drizzle-orm/pg-core";
 import { personas } from "./personas";
 import { createId } from "@paralleldrive/cuid2";
 import { users } from "./auth";
-import { count, eq } from "drizzle-orm";
 
 export const hotmartCourses = pgTable(
 	"hotmart_courses",
@@ -80,20 +78,4 @@ export const hotmartCourseLessons = pgTable(
 			table.hotmartId,
 		),
 	}),
-);
-
-export const hotmartCourseLessonCount = pgView(
-	"hotmart_course_lesson_count",
-).as((qb) =>
-	qb
-		.select({
-			course: hotmartCourseModules.course,
-			count: count(hotmartCourseLessons.id).as("count"),
-		})
-		.from(hotmartCourseLessons)
-		.leftJoin(
-			hotmartCourseModules,
-			eq(hotmartCourseModules.id, hotmartCourseLessons.module),
-		)
-		.groupBy(hotmartCourseModules.course),
 );

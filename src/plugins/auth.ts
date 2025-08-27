@@ -10,6 +10,8 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import type { FastifyInstance, FastifyPluginAsync } from "fastify";
 import fp from "fastify-plugin";
 import { createId } from "@paralleldrive/cuid2";
+import { threads } from "../database/schema";
+import { eq } from "drizzle-orm";
 
 const authPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 	const authClient = betterAuth({
@@ -48,7 +50,22 @@ const authPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 			minPasswordLength: 8,
 			revokeSessionsOnPasswordReset: true,
 		},
-		plugins: [jwt(), bearer(), organization(), admin(), anonymous()],
+		plugins: [
+			jwt(),
+			bearer(),
+			organization(),
+			admin(),
+			anonymous({
+				onLinkAccount: async ({ anonymousUser, newUser }) => {
+					await fastify.db
+						.update(threads)
+						.set({
+							author: newUser.user.id,
+						})
+						.where(eq(threads.author, anonymousUser.user.id));
+				},
+			}),
+		],
 		database: drizzleAdapter(fastify.db, { provider: "pg", usePlural: true }),
 	});
 
