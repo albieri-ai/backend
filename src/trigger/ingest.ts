@@ -258,8 +258,6 @@ export const IngestVideoFile = task({
 
 		logger.log("audio file uploaded");
 
-		logger.log(`will transcribe: ${url}`);
-
 		const transcription = (await groqSdk.audio.transcriptions.create({
 			model: "whisper-large-v3-turbo",
 			url,
@@ -281,13 +279,7 @@ export const IngestVideoFile = task({
 
 		const segments = transcription.segments;
 
-		console.log("url: ", new URL(url));
-
-		console.log("segments: ", segments);
-
 		const fullText = segments.map((s) => s.text).join(" ");
-
-		logger.log(`full text: ${fullText}`);
 
 		const { text: summary } = await generateText({
 			model: groq("llama-3.3-70b-versatile"),
