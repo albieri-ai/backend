@@ -257,8 +257,6 @@ export default function (
 				];
 			}
 
-			console.log("messages: ", JSON.stringify(messages, null, 2));
-
 			const result = streamText({
 				model: fastify.ai.providers.gemini("gemini-2.0-flash"),
 				messages: convertToModelMessages(messages),

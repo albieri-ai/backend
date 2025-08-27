@@ -24,8 +24,6 @@ export default function (
 				.from(users)
 				.where(eq(users.id, request.params.userId));
 
-			console.log("user: ", user);
-
 			if (!user?.avatarId) {
 				return reply.callNotFound();
 			}
@@ -58,8 +56,6 @@ export default function (
 			const url = await getSignedUrl(fastify.s3, command, {
 				expiresIn: 360,
 			});
-
-			console.log("url: ", url);
 
 			return reply.redirect(url);
 		},
