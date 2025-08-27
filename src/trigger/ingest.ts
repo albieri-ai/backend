@@ -3,7 +3,7 @@ import { createDb } from "../database/db";
 import { YoutubeLoader } from "@langchain/community/document_loaders/web/youtube";
 import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
-import { embed, embedMany, generateText, experimental_transcribe } from "ai";
+import { embed, embedMany, generateText } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createGroq } from "@ai-sdk/groq";
 import { assetChunks, assetSummary, trainingAssets } from "../database/schema";
@@ -17,6 +17,7 @@ import {
 	S3Client,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import Groq from "groq-sdk";
 
 export const IngestYoutubeVideo = task({
 	id: "ingest-youtube-video",
@@ -208,6 +209,9 @@ export const IngestVideoFile = task({
 		const groq = createGroq({
 			apiKey: process.env.GROQ_API_KEY,
 		});
+		const groqSdk = new Groq({
+			apiKey: process.env.GROQ_API_KEY,
+		});
 
 		const extractAudio = async () =>
 			new Promise((resolve, reject) => {
@@ -254,12 +258,36 @@ export const IngestVideoFile = task({
 
 		logger.log("audio file uploaded");
 
-		const { segments } = await experimental_transcribe({
-			model: groq.transcription("whisper-large-v3-turbo"),
-			audio: url,
-		});
+		logger.log(`will transcribe: ${url}`);
+
+		const transcription = (await groqSdk.audio.transcriptions.create({
+			model: "whisper-large-v3-turbo",
+			url,
+			response_format: "verbose_json",
+		})) as unknown as {
+			segments: {
+				id: number;
+				seek: number;
+				start: number;
+				end: number;
+				text: string;
+				tokens: number[];
+				temperature: number;
+				avg_logprob: number;
+				compression_ratio: number;
+				no_speech_prob: number;
+			}[];
+		};
+
+		const segments = transcription.segments;
+
+		console.log("url: ", new URL(url));
+
+		console.log("segments: ", segments);
 
 		const fullText = segments.map((s) => s.text).join(" ");
+
+		logger.log(`full text: ${fullText}`);
 
 		const { text: summary } = await generateText({
 			model: groq("llama-3.3-70b-versatile"),
@@ -310,13 +338,15 @@ export const IngestVideoFile = task({
 				version: 1,
 			});
 
-			await trx.insert(assetChunks).values(
-				docOutput.map((d, index) => ({
-					asset: payload.assetID,
-					text: d,
-					embeddings: embeddings[index]!,
-				})),
-			);
+			if (docOutput.length) {
+				await trx.insert(assetChunks).values(
+					docOutput.map((d, index) => ({
+						asset: payload.assetID,
+						text: d,
+						embeddings: embeddings[index]!,
+					})),
+				);
+			}
 		});
 
 		logger.info(`infos saved in db for: ${payload.assetID}`);

@@ -70,7 +70,7 @@ export const hotmartCourseLessons = pgTable(
 			.$default(() => createId()),
 		module: text()
 			.notNull()
-			.references(() => hotmartCourses.id, { onDelete: "cascade" }),
+			.references(() => hotmartCourseModules.id, { onDelete: "cascade" }),
 		name: text().notNull(),
 		hotmartId: text(),
 	},

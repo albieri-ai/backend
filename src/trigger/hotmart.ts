@@ -1,4 +1,4 @@
-import { task } from "@trigger.dev/sdk";
+import { task, logger } from "@trigger.dev/sdk";
 import axios from "axios";
 import { createDb } from "../database/db";
 import {
@@ -7,7 +7,7 @@ import {
 	hotmartCourses,
 } from "../database/schema/hotmart";
 import { hotmartVideoAssets, trainingAssets } from "../database/schema";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { IngestVideoFile } from "./ingest";
 
 export const HotmartCourseImport = task({
@@ -30,6 +30,8 @@ export const HotmartCourseImport = task({
 
 		const slug = productInitialData.slug;
 
+		logger.log(`slug: ${slug}`);
+
 		const {
 			data: { name, description, clubSubdomain },
 		} = await axios.get<{
@@ -50,7 +52,7 @@ export const HotmartCourseImport = task({
 			},
 		);
 
-		const course = { name, description };
+		logger.log(`${name}: ${description}`);
 
 		const [{ data: normalModules }, { data: extraModules }] = await Promise.all(
 			[
@@ -82,7 +84,7 @@ export const HotmartCourseImport = task({
 						publicModule: boolean;
 						totalPages: number;
 					}[]
-				>("https://api-club-content.cb.hotmart.com/v4/modules/?extra=false", {
+				>("https://api-club-content.cb.hotmart.com/v4/modules/?extra=true", {
 					headers: {
 						Authorization: `Bearer ${payload.token}`,
 						club: clubSubdomain,
@@ -161,7 +163,11 @@ export const HotmartCourseImport = task({
 							...data.page,
 							moduleId: l.moduleId,
 							medias: medias
-								.filter((m) => m.contentType === "VIDEO" && m.fileSignedUrl)
+								.filter(
+									(m) =>
+										m.contentType.toLowerCase().includes("video") &&
+										m.fileSignedUrl,
+								)
 								.map((n) => ({
 									hotmartId: n.id,
 									url: n.fileSignedUrl,
@@ -207,6 +213,15 @@ export const HotmartCourseImport = task({
 						extra: m.extra,
 					})),
 				)
+				.onConflictDoUpdate({
+					target: [hotmartCourseModules.course, hotmartCourseModules.hotmartId],
+					set: {
+						name: sql`EXCLUDED.name`,
+						paid: sql`EXCLUDED.paid`,
+						public: sql`EXCLUDED.public`,
+						extra: sql`EXCLUDED.extra`,
+					},
+				})
 				.returning();
 
 			const moduleHotmartIdMap = modules.reduce<Record<string, string>>(
@@ -256,6 +271,8 @@ export const HotmartCourseImport = task({
 				})),
 			);
 
+			console.log(lessonsContent);
+
 			const mediasAlreadyProcessed = await trx
 				.select({ hotmartId: hotmartVideoAssets.hotmartId })
 				.from(trainingAssets)
@@ -267,6 +284,7 @@ export const HotmartCourseImport = task({
 					and(
 						eq(trainingAssets.persona, payload.persona),
 						eq(trainingAssets.type, "hotmart"),
+						isNotNull(hotmartVideoAssets.hotmartId),
 						inArray(
 							hotmartVideoAssets.hotmartId,
 							mediasToInsert.map((m) => m.hotmartId),
@@ -282,50 +300,52 @@ export const HotmartCourseImport = task({
 				(med) => !mediasAlreadyProcessedMap[med.hotmartId],
 			);
 
-			const assets = await trx
-				.insert(trainingAssets)
-				.values(
-					uniqueMediasToInsert.map(() => ({
-						type: "hotmart" as const,
-						status: "pending" as const,
-						enabled: true,
-						persona: payload.persona,
-						createdBy: payload.createdBy,
+			if (uniqueMediasToInsert.length) {
+				const assets = await trx
+					.insert(trainingAssets)
+					.values(
+						uniqueMediasToInsert.map(() => ({
+							type: "hotmart" as const,
+							status: "pending" as const,
+							enabled: true,
+							persona: payload.persona,
+							createdBy: payload.createdBy,
+						})),
+					)
+					.returning({ id: trainingAssets.id });
+
+				const videosHotmartIdMap = uniqueMediasToInsert.reduce<
+					Record<string, string>
+				>((acc, med) => {
+					acc[med.hotmartId] = med.url;
+
+					return acc;
+				}, {});
+
+				const medias = await trx
+					.insert(hotmartVideoAssets)
+					.values(
+						uniqueMediasToInsert.map((med, index) => ({
+							asset: assets[index].id,
+							lesson: med.lesson,
+							hotmartId: med.hotmartId,
+							name: med.name,
+						})),
+					)
+					.returning({
+						asset: hotmartVideoAssets.asset,
+						hotmartId: hotmartVideoAssets.hotmartId,
+					});
+
+				await IngestVideoFile.batchTrigger(
+					medias.map((med) => ({
+						payload: {
+							url: videosHotmartIdMap[med.hotmartId],
+							assetID: med.asset,
+						},
 					})),
-				)
-				.returning({ id: trainingAssets.id });
-
-			const videosHotmartIdMap = uniqueMediasToInsert.reduce<
-				Record<string, string>
-			>((acc, med) => {
-				acc[med.hotmartId] = med.url;
-
-				return acc;
-			}, {});
-
-			const medias = await trx
-				.insert(hotmartVideoAssets)
-				.values(
-					uniqueMediasToInsert.map((med, index) => ({
-						asset: assets[index].id,
-						lesson: med.lesson,
-						hotmartId: med.hotmartId,
-						name: med.name,
-					})),
-				)
-				.returning({
-					asset: hotmartVideoAssets.asset,
-					hotmartId: hotmartVideoAssets.hotmartId,
-				});
-
-			await IngestVideoFile.batchTrigger(
-				medias.map((med) => ({
-					payload: {
-						url: videosHotmartIdMap[med.hotmartId],
-						assetID: med.asset,
-					},
-				})),
-			);
+				);
+			}
 		});
 	},
 });
