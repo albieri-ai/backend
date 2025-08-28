@@ -405,53 +405,55 @@ export const MonitorYoutubeChannelSchedule = schedules.task({
 					(i) => !videosAlreadyAddedMap[i.videoId],
 				);
 
-				const assets = await trx
-					.insert(trainingAssets)
-					.values(
-						newVideos.map(() => ({
-							type: "youtube_video" as const,
-							status: "pending" as const,
-							enabled: true,
-							persona: channel.persona,
-							createdBy: channel.createdBy,
-						})),
-					)
-					.returning();
-
-				const channelVideoIdMap = insertedRecords.reduce<
-					Record<string, number>
-				>((acc, vid) => {
-					acc[vid.videoId] = vid.id;
-
-					return acc;
-				}, {});
-
 				if (newVideos.length) {
-					const videoRecords = await trx
-						.insert(youtubeVideoAssets)
+					const assets = await trx
+						.insert(trainingAssets)
 						.values(
-							newVideos.map((v, index) => ({
-								asset: assets[index].id,
-								url: `https://www.youtube.com/watch?v=${v.videoId}`,
-								title: v.title || "Título não disponível",
-								videoId: v.videoId,
-								channelVideo: channelVideoIdMap[v.videoId],
+							newVideos.map(() => ({
+								type: "youtube_video" as const,
+								status: "pending" as const,
+								enabled: true,
+								persona: channel.persona,
+								createdBy: channel.createdBy,
 							})),
 						)
 						.returning();
 
-					if (previousUploadedVideosWithoutChannelId.length) {
-						for (const vid of previousUploadedVideosWithoutChannelId) {
-							await trx
-								.update(youtubeVideoAssets)
-								.set({
-									channelVideo: channelVideoIdMap[vid.videoId],
-								})
-								.where(eq(youtubeVideoAssets.id, vid.id));
-						}
-					}
+					const channelVideoIdMap = insertedRecords.reduce<
+						Record<string, number>
+					>((acc, vid) => {
+						acc[vid.videoId] = vid.id;
 
-					return videoRecords;
+						return acc;
+					}, {});
+
+					if (newVideos.length) {
+						const videoRecords = await trx
+							.insert(youtubeVideoAssets)
+							.values(
+								newVideos.map((v, index) => ({
+									asset: assets[index].id,
+									url: `https://www.youtube.com/watch?v=${v.videoId}`,
+									title: v.title || "Título não disponível",
+									videoId: v.videoId,
+									channelVideo: channelVideoIdMap[v.videoId],
+								})),
+							)
+							.returning();
+
+						if (previousUploadedVideosWithoutChannelId.length) {
+							for (const vid of previousUploadedVideosWithoutChannelId) {
+								await trx
+									.update(youtubeVideoAssets)
+									.set({
+										channelVideo: channelVideoIdMap[vid.videoId],
+									})
+									.where(eq(youtubeVideoAssets.id, vid.id));
+							}
+						}
+
+						return videoRecords;
+					}
 				}
 
 				return [];
