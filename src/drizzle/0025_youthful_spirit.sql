@@ -1,0 +1,1 @@
+ALTER TABLE "youtube_channels" ADD COLUMN "channel_id" text;
