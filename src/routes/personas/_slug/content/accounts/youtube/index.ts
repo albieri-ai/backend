@@ -75,59 +75,59 @@ export default function (
 			const { persona } = request;
 
 			if (!persona) {
-				return reply.status(404).send({ error: "Persona not found" });
+				return reply.callNotFound();
+			}
+
+			const { data } = await youtubeAPI.get<{
+				items: {
+					kind: string;
+					etag: string;
+					id: string;
+					snippet: {
+						title: string;
+						description: string;
+						customUrl: string;
+						publishedAt: string;
+						thumbnails: {
+							default: {
+								url: string;
+								width: number;
+								height: number;
+							};
+							medium: {
+								url: string;
+								width: number;
+								height: number;
+							};
+							high: {
+								url: string;
+								width: number;
+								height: number;
+							};
+						};
+						localized: {
+							title: string;
+							description: string;
+						};
+						country: string;
+					};
+				}[];
+			}>("/channels", {
+				params: {
+					part: "snippet,contentDetails",
+					id: request.body.channelID,
+					key: process.env.YOUTUBE_API_KEY,
+				},
+			});
+
+			if (
+				!data.items.length ||
+				!data.items.find((d) => d.id === request.body.channelID)
+			) {
+				return reply.callNotFound();
 			}
 
 			const channel = await fastify.db.transaction(async (trx) => {
-				const { data } = await youtubeAPI.get<{
-					items: {
-						kind: string;
-						etag: string;
-						id: string;
-						snippet: {
-							title: string;
-							description: string;
-							customUrl: string;
-							publishedAt: string;
-							thumbnails: {
-								default: {
-									url: string;
-									width: number;
-									height: number;
-								};
-								medium: {
-									url: string;
-									width: number;
-									height: number;
-								};
-								high: {
-									url: string;
-									width: number;
-									height: number;
-								};
-							};
-							localized: {
-								title: string;
-								description: string;
-							};
-							country: string;
-						};
-					}[];
-				}>("/channels", {
-					params: {
-						part: "snippet,contentDetails",
-						id: request.body.channelID,
-						key: process.env.YOUTUBE_API_KEY,
-					},
-				});
-
-				if (
-					!data.items.length ||
-					data.items.find((d) => d.id === request.body.channelID)
-				) {
-					return reply.callNotFound();
-				}
-
 				const [channel] = await trx
 					.insert(youtubeChannels)
 					.values({

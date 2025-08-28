@@ -199,7 +199,9 @@ const aiPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 			{
 				type: "text",
 				text: `
+				<user-prompt>
 		  ${content}
+				</user-prompt>
 
 			<context>
 			${similarContent
