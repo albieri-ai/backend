@@ -25,41 +25,17 @@ export const MonitorYoutubeChannel = task({
 	run: async (
 		channel: Pick<
 			InferSelectModel<typeof youtubeChannels>,
-			"id" | "persona" | "url" | "createdBy"
+			"id" | "persona" | "channelID" | "createdBy"
 		>,
 	) => {
-		const channelUrl = new URL(channel.url);
-
-		const path = channelUrl.pathname.replace(/^\/+|\/+$/g, "");
-		let channelID: string | undefined;
-
-		if (path.startsWith("channel/")) {
-			channelID = path.split("/")[1]; // already in format /channel/CHANNEL_ID
-		} else {
-			const searchQuery = path.startsWith("@")
-				? path.slice(1)
-				: path.split("/")[1] || path;
-
-			const { data } = await youtubeAPI.get("/search", {
-				params: {
-					part: "snippet",
-					type: "channel",
-					q: encodeURIComponent(searchQuery),
-					key: process.env.YOUTUBE_API_KEY,
-				},
-			});
-
-			channelID = data.items[0]?.snippet?.channelId;
-		}
-
-		if (!channelID) {
+		if (!channel.channelID) {
 			throw new Error("invalid channel url");
 		}
 
 		const { data } = await youtubeAPI.get("/channels", {
 			params: {
 				part: "snippet,contentDetails",
-				id: channelID,
+				id: channel.channelID,
 				key: process.env.YOUTUBE_API_KEY,
 			},
 		});
@@ -260,39 +236,15 @@ export const MonitorYoutubeChannelSchedule = schedules.task({
 		if (!channel) {
 			throw new Error("channel not found");
 		}
-
-		const channelUrl = new URL(channel.url);
-
-		const path = channelUrl.pathname.replace(/^\/+|\/+$/g, "");
-		let channelID: string | undefined;
-
-		if (path.startsWith("channel/")) {
-			channelID = path.split("/")[1]; // already in format /channel/CHANNEL_ID
-		} else {
-			const searchQuery = path.startsWith("@")
-				? path.slice(1)
-				: path.split("/")[1] || path;
-
-			const { data } = await youtubeAPI.get("/search", {
-				params: {
-					part: "snippet",
-					type: "channel",
-					q: encodeURIComponent(searchQuery),
-					key: process.env.YOUTUBE_API_KEY,
-				},
-			});
-
-			channelID = data.items[0]?.snippet?.channelId;
-		}
-
-		if (!channelID) {
+		
+		if (!channel.channelID) {
 			throw new Error("invalid channel url");
 		}
 
 		const { data } = await youtubeAPI.get("/channels", {
 			params: {
 				part: "snippet,contentDetails",
-				id: channelID,
+				id: channel.channelID,
 				key: process.env.YOUTUBE_API_KEY,
 			},
 		});

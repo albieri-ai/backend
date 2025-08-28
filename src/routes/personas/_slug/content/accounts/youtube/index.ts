@@ -17,6 +17,11 @@ import {
 } from "../../../../../../trigger/youtube";
 import { schedules } from "@trigger.dev/sdk";
 import { adminOnly } from "../../../../../../lib/adminOnly";
+import axios from "axios";
+
+const youtubeAPI = axios.create({
+	baseURL: "https://www.googleapis.com/youtube/v3",
+});
 
 export default function (
 	fastify: FastifyInstance,
@@ -51,16 +56,16 @@ export default function (
 
 	fastify.post<{
 		Params: { slug: string };
-		Body: { url: string; keepSynced: boolean };
+		Body: { channelID: string; keepSynced: boolean };
 	}>(
-		"",
+		"/",
 		{
 			schema: {
 				params: z.object({
 					slug: z.string(),
 				}),
 				body: z.object({
-					url: z.string().url(),
+					channelID: z.string(),
 					keepSynced: z.boolean(),
 				}),
 			},
@@ -74,11 +79,65 @@ export default function (
 			}
 
 			const channel = await fastify.db.transaction(async (trx) => {
+				const { data } = await youtubeAPI.get<{
+					items: {
+						kind: string;
+						etag: string;
+						id: string;
+						snippet: {
+							title: string;
+							description: string;
+							customUrl: string;
+							publishedAt: string;
+							thumbnails: {
+								default: {
+									url: string;
+									width: number;
+									height: number;
+								};
+								medium: {
+									url: string;
+									width: number;
+									height: number;
+								};
+								high: {
+									url: string;
+									width: number;
+									height: number;
+								};
+							};
+							localized: {
+								title: string;
+								description: string;
+							};
+							country: string;
+						};
+					}[];
+				}>("/channels", {
+					params: {
+						part: "snippet,contentDetails",
+						id: request.body.channelID,
+						key: process.env.YOUTUBE_API_KEY,
+					},
+				});
+
+				if (
+					!data.items.length ||
+					data.items.find((d) => d.id === request.body.channelID)
+				) {
+					return reply.callNotFound();
+				}
+
 				const [channel] = await trx
 					.insert(youtubeChannels)
 					.values({
 						persona: request.persona!.id,
-						url: request.body.url,
+						url: `https://www.youtube.com/@${data.items[0].snippet.customUrl}`,
+						name: data.items[0].snippet.title,
+						channelID: request.body.channelID,
+						thumbnailUrl:
+							data.items[0].snippet.thumbnails.high.url ||
+							data.items[0].snippet.thumbnails.default.url,
 						keepSynced: request.body.keepSynced,
 						createdBy: request.user!.id,
 					})
@@ -88,7 +147,7 @@ export default function (
 					{
 						id: channel.id,
 						persona: persona.id,
-						url: channel.url,
+						channelID: channel.channelID,
 						createdBy: channel.createdBy,
 					},
 					{
