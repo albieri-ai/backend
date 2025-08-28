@@ -1,0 +1,2 @@
+DROP INDEX "youtube_channels_persona_index";--> statement-breakpoint
+CREATE UNIQUE INDEX "youtube_channels_persona_index" ON "youtube_channels" USING btree ("persona") WHERE "youtube_channels"."disabled_at" is null;

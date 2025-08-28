@@ -11,7 +11,7 @@ import {
 import { personas } from "./personas";
 import { users } from "./auth";
 import { createId } from "@paralleldrive/cuid2";
-import { count } from "drizzle-orm";
+import { count, isNull } from "drizzle-orm";
 
 export const youtubeChannels = pgTable(
 	"youtube_channels",
@@ -35,7 +35,9 @@ export const youtubeChannels = pgTable(
 		disabledAt: timestamp(),
 	},
 	(table) => ({
-		youtubeChannelsPersonaIdx: uniqueIndex().on(table.persona),
+		youtubeChannelsPersonaIdx: uniqueIndex()
+			.on(table.persona)
+			.where(isNull(table.disabledAt)),
 	}),
 );
 

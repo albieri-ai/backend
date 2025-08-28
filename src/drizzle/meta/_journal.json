@@ -169,6 +169,13 @@
       "when": 1756316659817,
       "tag": "0023_lumpy_reaper",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1756393038840,
+      "tag": "0024_clever_the_initiative",
+      "breakpoints": true
     }
   ]
 }
