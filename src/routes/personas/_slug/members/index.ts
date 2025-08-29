@@ -69,19 +69,21 @@ export default function (
 			},
 		},
 		async (request, reply) => {
-			const personaMembers = fastify.db
-				.$with("persona_members")
-				.as(
-					fastify.db
-						.selectDistinct({ author: threads.author })
-						.from(threads)
-						.where(eq(threads.persona, request.persona!.id)),
-				);
+			const personaMembers = fastify.db.$with("persona_members").as(
+				fastify.db
+					.selectDistinct({
+						author: threads.author,
+						persona: threads.persona,
+					})
+					.from(threads)
+					.where(eq(threads.persona, request.persona!.id)),
+			);
 
 			const userStatistics = fastify.db.$with("user_statistics").as(
 				fastify.db
 					.select({
 						author: userMessages.author,
+						persona: userMessages.persona,
 						count: count().as("count"),
 						words: sum(userMessages.wordCount).as("word_count"),
 						lastMessage: max(userMessages.date).as("last_message"),
@@ -159,7 +161,13 @@ export default function (
 				})
 				.from(users)
 				.leftJoin(personaMembers, eq(personaMembers.author, users.id))
-				.leftJoin(userStatistics, eq(userStatistics.author, users.id))
+				.leftJoin(
+					userStatistics,
+					and(
+						eq(userStatistics.author, users.id),
+						eq(userStatistics.persona, personaMembers.persona),
+					),
+				)
 				.where(isNotNull(personaMembers.author))
 				.limit(request.query.limit)
 				.offset((request.query.page - 1) * request.query.limit)
