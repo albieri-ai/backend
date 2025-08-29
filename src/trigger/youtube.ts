@@ -236,7 +236,7 @@ export const MonitorYoutubeChannelSchedule = schedules.task({
 		if (!channel) {
 			throw new Error("channel not found");
 		}
-		
+
 		if (!channel.channelID) {
 			throw new Error("invalid channel url");
 		}

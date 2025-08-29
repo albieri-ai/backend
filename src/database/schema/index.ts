@@ -1,6 +1,7 @@
 export * from "./auth";
 export * from "./general";
 export * from "./hotmart";
+export * from "./monetization";
 export * from "./personas";
 export * from "./statistics";
 export * from "./storage";
