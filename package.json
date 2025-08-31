@@ -12,8 +12,8 @@
     "type-check": "tsc --noEmit",
     "drizzle:studio": "drizzle-kit studio",
     "generate": "drizzle-kit generate",
-    "trigger:dev": "pnpm dlx trigger.dev dev",
-    "trigger:deploy": "pnpm dlx trigger.dev deploy",
+    "trigger:dev": "pnpm dlx trigger.dev@4.0.1 dev",
+    "trigger:deploy": "pnpm dlx trigger.dev@4.0.1 deploy",
     "email:dev": "email dev --dir ./src/emails"
   },
   "keywords": [],
