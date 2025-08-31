@@ -200,14 +200,25 @@ export const MonitorYoutubeChannel = task({
 				return videoRecords;
 			});
 
-			await IngestYoutubeVideo.batchTrigger(
-				videoRecords.map((vid) => ({
-					payload: {
-						assetID: vid.asset,
-						url: vid.url,
-					},
-				})),
-			);
+			let index = 0;
+			const step = 500;
+
+			while (index <= videoRecords.length) {
+				const chunk = videoRecords.slice(index, index + step);
+
+				if (chunk.length > 0) {
+					await IngestYoutubeVideo.batchTrigger(
+						chunk.map((vid) => ({
+							payload: {
+								assetID: vid.asset,
+								url: vid.url,
+							},
+						})),
+					);
+				}
+
+				index += step;
+			}
 		}
 	},
 });
@@ -412,14 +423,25 @@ export const MonitorYoutubeChannelSchedule = schedules.task({
 			});
 
 			if (videoRecords.length) {
-				await IngestYoutubeVideo.batchTrigger(
-					videoRecords.map((vid) => ({
-						payload: {
-							assetID: vid.asset,
-							url: vid.url,
-						},
-					})),
-				);
+				let index = 0;
+				const step = 500;
+
+				while (index <= videoRecords.length) {
+					const chunk = videoRecords.slice(index, index + step);
+
+					if (chunk.length > 0) {
+						await IngestYoutubeVideo.batchTrigger(
+							chunk.map((vid) => ({
+								payload: {
+									assetID: vid.asset,
+									url: vid.url,
+								},
+							})),
+						);
+					}
+
+					index += step;
+				}
 			}
 		}
 	},
