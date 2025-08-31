@@ -333,14 +333,25 @@ export const HotmartCourseImport = task({
 						hotmartId: hotmartVideoAssets.hotmartId,
 					});
 
-				await IngestVideoFile.batchTrigger(
-					medias.map((med) => ({
-						payload: {
-							url: videosHotmartIdMap[med.hotmartId],
-							assetID: med.asset,
-						},
-					})),
-				);
+				let index = 0;
+				const step = 500;
+
+				while (index <= medias.length) {
+					const chunk = medias.slice(index, index + step);
+
+					if (chunk.length > 0) {
+						await IngestVideoFile.batchTrigger(
+							chunk.map((med) => ({
+								payload: {
+									url: videosHotmartIdMap[med.hotmartId],
+									assetID: med.asset,
+								},
+							})),
+						);
+					}
+
+					index += step;
+				}
 			}
 		});
 	},

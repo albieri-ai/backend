@@ -200,24 +200,26 @@ export const MonitorYoutubeChannel = task({
 				return videoRecords;
 			});
 
-			let index = 0;
-			const step = 500;
+			if (videoRecords.length) {
+				let index = 0;
+				const step = 500;
 
-			while (index <= videoRecords.length) {
-				const chunk = videoRecords.slice(index, index + step);
+				while (index <= videoRecords.length) {
+					const chunk = videoRecords.slice(index, index + step);
 
-				if (chunk.length > 0) {
-					await IngestYoutubeVideo.batchTrigger(
-						chunk.map((vid) => ({
-							payload: {
-								assetID: vid.asset,
-								url: vid.url,
-							},
-						})),
-					);
+					if (chunk.length > 0) {
+						await IngestYoutubeVideo.batchTrigger(
+							chunk.map((vid) => ({
+								payload: {
+									assetID: vid.asset,
+									url: vid.url,
+								},
+							})),
+						);
+					}
+
+					index += step;
 				}
-
-				index += step;
 			}
 		}
 	},
