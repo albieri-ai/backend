@@ -92,7 +92,7 @@ export default function (
 					})
 					.from(userMessages)
 					.where(eq(userMessages.persona, request.persona!.id))
-					.groupBy(userMessages.author),
+					.groupBy(userMessages.author, userMessages.persona),
 			);
 
 			let order = [asc(users.name)];
@@ -171,7 +171,11 @@ export default function (
 				.where(isNotNull(personaMembers.author))
 				.limit(request.query.limit)
 				.offset((request.query.page - 1) * request.query.limit)
-				.orderBy(...order);
+				.orderBy(...order)
+				.catch((err) => {
+					console.error(err);
+					throw err;
+				});
 
 			const userCount = await fastify.db
 				.with(personaMembers)
