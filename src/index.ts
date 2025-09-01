@@ -20,6 +20,7 @@ import type { createGroq } from "@ai-sdk/groq";
 import type { createOpenAI } from "@ai-sdk/openai";
 import type Stripe from "stripe";
 import type { UIMessage } from "ai";
+import { PostHog } from "posthog-node";
 
 async function createServer() {
 	const server = fastify({
@@ -159,6 +160,7 @@ declare module "fastify" {
 		auth: typeof auth;
 		s3: S3Client;
 		stripe: Stripe;
+		posthog: PostHog;
 		ai: {
 			providers: {
 				gemini: ReturnType<typeof createGoogleGenerativeAI>;

@@ -13,6 +13,7 @@ import { personaLoader } from "../../../../lib/personaLoader";
 import { z } from "zod";
 import { format } from "date-fns";
 import { createId } from "@paralleldrive/cuid2";
+import { withTracing } from "@posthog/ai";
 
 export default function (
 	fastify: FastifyInstance,
@@ -257,8 +258,20 @@ export default function (
 				];
 			}
 
+			const model = withTracing(
+				fastify.ai.providers.gemini("gemini-2.0-flash"),
+				fastify.posthog,
+				{
+					posthogDistinctId: request.user.id,
+					posthogTraceId: "trace_123",
+					posthogProperties: { conversationId: chat.id },
+					posthogPrivacyMode: false,
+					posthogGroups: { persona: request.persona!.id },
+				},
+			);
+
 			const result = streamText({
-				model: fastify.ai.providers.gemini("gemini-2.0-flash"),
+				model: model,
 				messages: convertToModelMessages(messages),
 				system: `
           # Identidade
