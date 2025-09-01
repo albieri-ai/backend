@@ -4,6 +4,8 @@ import {
 	timestamp,
 	boolean,
 	uniqueIndex,
+	serial,
+	vector,
 } from "drizzle-orm/pg-core";
 import { personas } from "./personas";
 import { createId } from "@paralleldrive/cuid2";
@@ -77,5 +79,43 @@ export const hotmartCourseLessons = pgTable(
 			table.module,
 			table.hotmartId,
 		),
+	}),
+);
+
+export const hotmartCourseModulesSummary = pgTable(
+	"hotmart_course_modules_summary",
+	{
+		id: serial().primaryKey(),
+		module: text()
+			.notNull()
+			.references(() => hotmartCourseModules.id, { onDelete: "cascade" }),
+		summary: text().notNull(),
+		embeddings: vector({ dimensions: 1536 }).notNull(),
+		createdAt: timestamp().defaultNow(),
+		updatedAt: timestamp()
+			.defaultNow()
+			.$onUpdate(() => new Date()),
+	},
+	(table) => ({
+		hotmartCourseModuleSummaryModuleIdx: uniqueIndex().on(table.module),
+	}),
+);
+
+export const hotmartCoursesSummary = pgTable(
+	"hotmart_courses_summary",
+	{
+		id: serial().primaryKey(),
+		course: text()
+			.notNull()
+			.references(() => hotmartCourses.id, { onDelete: "cascade" }),
+		summary: text().notNull(),
+		embeddings: vector({ dimensions: 1536 }).notNull(),
+		createdAt: timestamp().defaultNow(),
+		updatedAt: timestamp()
+			.defaultNow()
+			.$onUpdate(() => new Date()),
+	},
+	(table) => ({
+		hotmartCourseSummaryCourseIdx: uniqueIndex().on(table.course),
 	}),
 );

@@ -18,7 +18,7 @@ const posthogPlugin: FastifyPluginAsync<{}> = async (
 };
 
 export default fp(posthogPlugin, {
-	name: "ai",
+	name: "posthog",
 	fastify: ">=4.0.0",
 	dependencies: ["@fastify/env"],
 });

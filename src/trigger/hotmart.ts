@@ -4,11 +4,20 @@ import { createDb } from "../database/db";
 import {
 	hotmartCourseLessons,
 	hotmartCourseModules,
+	hotmartCourseModulesSummary,
 	hotmartCourses,
+	hotmartCoursesSummary,
 } from "../database/schema/hotmart";
-import { hotmartVideoAssets, trainingAssets } from "../database/schema";
+import {
+	assetSummary,
+	hotmartVideoAssets,
+	trainingAssets,
+} from "../database/schema";
 import { and, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { IngestVideoFile } from "./ingest";
+import { embed, generateText } from "ai";
+import { createGroq } from "@ai-sdk/groq";
+import { createOpenAI } from "@ai-sdk/openai";
 
 export const HotmartCourseImport = task({
 	id: "hotmart-course-import",
@@ -340,7 +349,7 @@ export const HotmartCourseImport = task({
 					const chunk = medias.slice(index, index + step);
 
 					if (chunk.length > 0) {
-						await IngestVideoFile.batchTrigger(
+						await IngestVideoFile.batchTriggerAndWait(
 							chunk.map((med) => ({
 								payload: {
 									url: videosHotmartIdMap[med.hotmartId],
@@ -352,7 +361,163 @@ export const HotmartCourseImport = task({
 
 					index += step;
 				}
+
+				await HotmartModuleSummarize.batchTriggerAndWait(
+					modules.map((m) => ({ payload: { id: m.id } })),
+				);
+
+				await HotmartCourseSummarize.trigger({ id: payload.id });
 			}
 		});
+	},
+});
+
+export const HotmartModuleSummarize = task({
+	id: "hotmart-course-module-summarize",
+	run: async (payload: { id: string }) => {
+		const { db } = await createDb({
+			connectionString: process.env.DATABASE_URL!,
+		});
+
+		const lessonsSummary = await db
+			.select({
+				title: hotmartCourseLessons.name,
+				summary: assetSummary.summary,
+			})
+			.from(assetSummary)
+			.leftJoin(
+				hotmartVideoAssets,
+				eq(hotmartVideoAssets.asset, assetSummary.asset),
+			)
+			.leftJoin(
+				hotmartCourseLessons,
+				eq(hotmartCourseLessons.id, hotmartVideoAssets.lesson),
+			)
+			.where(eq(hotmartCourseLessons.module, payload.id));
+
+		const openai = createOpenAI({
+			apiKey: process.env.OPENAI_API_KEY,
+		});
+		const groq = createGroq({
+			apiKey: process.env.GROQ_API_KEY,
+		});
+
+		const { text: summary } = await generateText({
+			model: groq("llama-3.3-70b-versatile"),
+			system: `\n
+      - você gerará um resumo curto e conciso do texto fornecido
+      - o resumo deve conter no máximo 500 caracteres
+      - o texto fornecido são resumos de aulas de um módulo de um curso online
+      - o resumo deve ser claro e direto, capturando os principais pontos abordados nesse módulo
+      - evite jargões técnicos ou termos complexos
+      - use uma linguagem simples e acessível
+      - não use aspas ou dois pontos
+      `,
+			prompt: lessonsSummary
+				.map(
+					(l) =>
+						`
+			Título da Aula: ${l.title}
+
+			Resumo da Aula: ${l.summary}
+			`,
+				)
+				.join(`\n
+			---------
+			`),
+		});
+
+		const { embedding: embeddings } = await embed({
+			model: openai.embedding("text-embedding-3-small"),
+			value: summary,
+		});
+
+		await db
+			.insert(hotmartCourseModulesSummary)
+			.values({
+				module: payload.id,
+				summary,
+				embeddings,
+			})
+			.onConflictDoUpdate({
+				target: [hotmartCourseModulesSummary.module],
+				set: {
+					summary,
+					embeddings,
+				},
+			});
+	},
+});
+
+export const HotmartCourseSummarize = task({
+	id: "hotmart-course-summarize",
+	run: async (payload: { id: string }) => {
+		const { db } = await createDb({
+			connectionString: process.env.DATABASE_URL!,
+		});
+
+		const modulesSummary = await db
+			.select({
+				title: hotmartCourseModules.name,
+				summary: hotmartCourseModulesSummary.summary,
+			})
+			.from(hotmartCourseModulesSummary)
+			.leftJoin(
+				hotmartCourseModules,
+				eq(hotmartCourseModules.id, hotmartCourseModulesSummary.module),
+			)
+			.where(eq(hotmartCourseModules.course, payload.id));
+
+		const openai = createOpenAI({
+			apiKey: process.env.OPENAI_API_KEY,
+		});
+		const groq = createGroq({
+			apiKey: process.env.GROQ_API_KEY,
+		});
+
+		const { text: summary } = await generateText({
+			model: groq("llama-3.3-70b-versatile"),
+			system: `\n
+      - você gerará um resumo curto e conciso do texto fornecido
+      - o resumo deve conter no máximo 500 caracteres
+      - o texto fornecido são resumos de módulos de um curso online
+      - o resumo deve ser claro e direto, capturando os principais pontos abordados nesse curso
+      - evite jargões técnicos ou termos complexos
+      - use uma linguagem simples e acessível
+      - não use aspas ou dois pontos
+      `,
+			prompt: modulesSummary
+				.map(
+					(l) =>
+						`
+			Título do Módulo: ${l.title}
+
+			Resumo do Módulo: ${l.summary}
+			`,
+				)
+				.join(`\n
+			---------
+			`),
+		});
+
+		const { embedding: embeddings } = await embed({
+			model: openai.embedding("text-embedding-3-small"),
+			value: summary,
+		});
+
+		await db
+			.insert(hotmartCoursesSummary)
+			.values({
+				course: payload.id,
+				summary,
+				embeddings,
+			})
+			.onConflictDoUpdate({
+				target: [hotmartCoursesSummary.course],
+				set: {
+					summary,
+					embeddings,
+				},
+			});
 	},
 });

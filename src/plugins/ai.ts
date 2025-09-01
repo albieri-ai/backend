@@ -6,6 +6,12 @@ import { createGroq } from "@ai-sdk/groq";
 import {
 	assetChunks,
 	assetSummary,
+	hotmartCourseLessons,
+	hotmartCourseModules,
+	hotmartCourseModulesSummary,
+	hotmartCourses,
+	hotmartCoursesSummary,
+	hotmartVideoAssets,
 	trainingAssets,
 	youtubeVideoAssets,
 } from "../database/schema";
@@ -14,13 +20,14 @@ import {
 	cosineDistance,
 	desc,
 	eq,
+	gt,
 	gte,
 	inArray,
 	isNotNull,
 	isNull,
+	or,
 	sql,
 } from "drizzle-orm";
-import { embed, type UIMessage } from "ai";
 
 const aiPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 	const gemini = createGoogleGenerativeAI({
@@ -145,6 +152,7 @@ const aiPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 				id: trainingAssets.id,
 				title: youtubeVideoAssets.title,
 				summary: assetSummary.summary,
+				chunk: assetChunks.text,
 				url: youtubeVideoAssets.url,
 			})
 			.from(assetChunks)
@@ -175,46 +183,177 @@ const aiPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 		return chunks;
 	}
 
-	async function enhanceMessagePartsWithContext(
-		persona: string,
-		parts: UIMessage["parts"],
-	): Promise<UIMessage["parts"]> {
-		const content = parts
-			.map((p) => (p.type === "text" ? p.text : ""))
-			.filter((p) => p.length > 0)
-			.join("\n");
+	async function retrieveCourse(persona: string, embed: number[]) {
+		const courseSummarySimilarity = sql`1 - (${cosineDistance(hotmartCoursesSummary.embeddings, embed)})`;
+		const courseModuleSummarySimilarity = sql`1 - (${cosineDistance(hotmartCourseModulesSummary.embeddings, embed)})`;
+		const courseLessonSummarySimilarity = sql`1 - (${cosineDistance(assetSummary.embeddings, embed)})`;
 
-		const { embedding } = await embed({
-			model: openai.embedding("text-embedding-3-small"),
-			value: content,
-		});
+		const courses = (await fastify.db
+			.select({
+				id: hotmartCourses.id,
+				name: hotmartCourses.name,
+				summary: hotmartCoursesSummary.summary,
+			})
+			.from(assetChunks)
+			.leftJoin(
+				hotmartVideoAssets,
+				eq(hotmartVideoAssets.asset, assetChunks.asset),
+			)
+			.leftJoin(trainingAssets, eq(trainingAssets.id, hotmartVideoAssets.asset))
+			.leftJoin(assetSummary, eq(assetSummary.asset, hotmartVideoAssets.asset))
+			.leftJoin(
+				hotmartCourseLessons,
+				eq(hotmartCourseLessons.id, hotmartVideoAssets.lesson),
+			)
+			.leftJoin(
+				hotmartCourseModules,
+				eq(hotmartCourseModules.id, hotmartCourseLessons.module),
+			)
+			.leftJoin(
+				hotmartCourses,
+				eq(hotmartCourses.id, hotmartCourseModules.course),
+			)
+			.leftJoin(
+				hotmartCourseModulesSummary,
+				eq(hotmartCourseModulesSummary.module, hotmartCourseModules.id),
+			)
+			.leftJoin(
+				hotmartCoursesSummary,
+				eq(hotmartCoursesSummary.course, hotmartCourseModules.course),
+			)
+			.where(
+				and(
+					isNotNull(hotmartCourses.id),
+					isNotNull(hotmartVideoAssets.id),
+					eq(trainingAssets.persona, persona),
+					or(
+						gt(courseSummarySimilarity, 0.6),
+						gt(courseModuleSummarySimilarity, 0.75),
+						gt(courseLessonSummarySimilarity, 0.8),
+					),
+				),
+			)
+			.orderBy(
+				desc(courseSummarySimilarity),
+				desc(courseModuleSummarySimilarity),
+				desc(courseLessonSummarySimilarity),
+			)
+			.limit(5)) as {
+			id: string;
+			name: string;
+			summary: string;
+		}[];
 
-		const similarContent = await retrieveContent(persona, embedding);
+		return courses;
+	}
 
-		if (!similarContent.length) {
-			return parts;
-		}
+	async function retrieveCourseModule(persona: string, embed: number[]) {
+		const courseModuleSummarySimilarity = sql`1 - (${cosineDistance(hotmartCourseModulesSummary.embeddings, embed)})`;
+		const courseLessonSummarySimilarity = sql`1 - (${cosineDistance(assetSummary.embeddings, embed)})`;
 
-		return [
-			{
-				type: "text",
-				text: `
-				<user-prompt>
-		  ${content}
-				</user-prompt>
+		const modules = (await fastify.db
+			.select({
+				id: hotmartCourseModules.id,
+				name: hotmartCourseModules.name,
+				course: hotmartCourses.name,
+				summary: hotmartCourseModulesSummary.summary,
+			})
+			.from(assetChunks)
+			.leftJoin(
+				hotmartVideoAssets,
+				eq(hotmartVideoAssets.asset, assetChunks.asset),
+			)
+			.leftJoin(trainingAssets, eq(trainingAssets.id, hotmartVideoAssets.asset))
+			.leftJoin(assetSummary, eq(assetSummary.asset, hotmartVideoAssets.asset))
+			.leftJoin(
+				hotmartCourseLessons,
+				eq(hotmartCourseLessons.id, hotmartVideoAssets.lesson),
+			)
+			.leftJoin(
+				hotmartCourseModules,
+				eq(hotmartCourseModules.id, hotmartCourseLessons.module),
+			)
+			.leftJoin(
+				hotmartCourses,
+				eq(hotmartCourses.id, hotmartCourseModules.course),
+			)
+			.leftJoin(
+				hotmartCourseModulesSummary,
+				eq(hotmartCourseModulesSummary.module, hotmartCourseModules.id),
+			)
+			.where(
+				and(
+					isNotNull(hotmartCourseModules.id),
+					isNotNull(hotmartVideoAssets.id),
+					eq(trainingAssets.persona, persona),
+					or(
+						gt(courseModuleSummarySimilarity, 0.6),
+						gt(courseLessonSummarySimilarity, 0.75),
+					),
+				),
+			)
+			.orderBy(
+				desc(courseModuleSummarySimilarity),
+				desc(courseLessonSummarySimilarity),
+			)
+			.limit(5)) as {
+			id: string;
+			name: string;
+			course: string;
+			summary: string;
+		}[];
 
-			<context>
-			${similarContent
-				.slice(0, 3)
-				.map(
-					(c) =>
-						`Conteúdo: ${c.asset}\nResumo: ${c.summary}\nConteúdo: ${c.chunk}`,
-				)
-				.join("\n\n\n")}
-			</context>
-		`,
-			},
-		];
+		return modules;
+	}
+
+	async function retrieveCourseLesson(persona: string, embed: number[]) {
+		const courseLessonSummarySimilarity = sql`1 - (${cosineDistance(assetSummary.embeddings, embed)})`;
+
+		const lessons = (await fastify.db
+			.select({
+				id: hotmartCourseModules.id,
+				name: hotmartCourseLessons.name,
+				course: hotmartCourses.name,
+				module: hotmartCourseModules.name,
+				summary: assetSummary.summary,
+			})
+			.from(assetChunks)
+			.leftJoin(
+				hotmartVideoAssets,
+				eq(hotmartVideoAssets.asset, assetChunks.asset),
+			)
+			.leftJoin(trainingAssets, eq(trainingAssets.id, hotmartVideoAssets.asset))
+			.leftJoin(assetSummary, eq(assetSummary.asset, hotmartVideoAssets.asset))
+			.leftJoin(
+				hotmartCourseLessons,
+				eq(hotmartCourseLessons.id, hotmartVideoAssets.lesson),
+			)
+			.leftJoin(
+				hotmartCourseModules,
+				eq(hotmartCourseModules.id, hotmartCourseLessons.module),
+			)
+			.leftJoin(
+				hotmartCourses,
+				eq(hotmartCourses.id, hotmartCourseModules.course),
+			)
+			.where(
+				and(
+					isNotNull(hotmartCourseLessons.id),
+					isNotNull(hotmartVideoAssets.id),
+					eq(trainingAssets.persona, persona),
+					gt(courseLessonSummarySimilarity, 0.6),
+				),
+			)
+			.orderBy(desc(courseLessonSummarySimilarity))
+			.limit(5)) as {
+			id: string;
+			name: string;
+			course: string;
+			module: string;
+			summary: string;
+		}[];
+
+		return lessons;
 	}
 
 	const ai = {
@@ -226,7 +365,9 @@ const aiPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 		handlers: {
 			retrieveContent,
 			retrieveYoutubeVideo,
-			enhanceMessagePartsWithContext,
+			retrieveCourse,
+			retrieveCourseModule,
+			retrieveCourseLesson,
 		},
 	};
 

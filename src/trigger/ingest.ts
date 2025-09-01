@@ -21,7 +21,7 @@ import Groq from "groq-sdk";
 
 export const IngestYoutubeVideo = task({
 	id: "ingest-youtube-video",
-	run: async (payload: { url: string; assetID: string }, { ctx }) => {
+	run: async (payload: { url: string; assetID: string }) => {
 		const loader = YoutubeLoader.createFromUrl(payload.url, {
 			language: "pt-BR",
 			addVideoInfo: true,
@@ -106,7 +106,7 @@ export const IngestYoutubeVideo = task({
 
 export const IngestPdfDocument = task({
 	id: "ingest-pdf-document",
-	run: async (payload: { url: string; assetID: string }, { ctx }) => {
+	run: async (payload: { url: string; assetID: string }) => {
 		const { data: blob } = await axios.get(payload.url, {
 			responseType: "arraybuffer",
 		});
@@ -199,7 +199,7 @@ export const IngestPdfDocument = task({
 
 export const IngestVideoFile = task({
 	id: "ingest-video-file",
-	run: async (payload: { url: string; assetID: string }, { ctx }) => {
+	run: async (payload: { url: string; assetID: string }) => {
 		const fileName = `${createId()}.mp3`;
 		const outputPath = `/tmp/${fileName}`;
 

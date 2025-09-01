@@ -15,6 +15,8 @@ import { createId } from "@paralleldrive/cuid2";
 import { Resend } from "resend";
 import { render } from "@react-email/components";
 import PasswordResetTemplate from "../emails/PasswordReset.template";
+import { threads } from "../database/schema";
+import { eq } from "drizzle-orm";
 
 const authPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 	const resend = new Resend(fastify.config.RESEND_API_KEY);
@@ -34,6 +36,12 @@ const authPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 				},
 			},
 		},
+		session: {
+			cookieCache: {
+				enabled: true,
+				maxAge: 5 * 60,
+			},
+		},
 		advanced: {
 			database: {
 				generateId: createId,
@@ -48,22 +56,37 @@ const authPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 			enabled: true,
 			minPasswordLength: 8,
 			revokeSessionsOnPasswordReset: true,
-			sendResetPassword: async ({ user, url, token }) => {
+			sendResetPassword: async ({ user, token }) => {
 				await resend.emails.send({
-					from: "",
+					from: "noreply@albieri.ai",
 					to: user.email,
 					subject: "Resete sua senha do Albieri",
 					html: await render(
 						<PasswordResetTemplate
 							userFirstName={user.name}
-							resetLink={`https://app.albieri.ai/auth/recuperar-senha?token=${token}`}
+							resetLink={`${fastify.config.APP_URL}/auth/recuperar-senha?token=${token}`}
 						/>,
 					),
 				});
 			},
 			autoSignIn: true,
 		},
-		plugins: [jwt(), bearer(), organization(), admin(), anonymous()],
+		plugins: [
+			jwt(),
+			bearer(),
+			organization(),
+			admin(),
+			anonymous({
+				onLinkAccount: async ({ anonymousUser, newUser }) => {
+					await fastify.db
+						.update(threads)
+						.set({
+							author: newUser.user.id,
+						})
+						.where(eq(threads.author, anonymousUser.user.id));
+				},
+			}),
+		],
 		database: drizzleAdapter(fastify.db, { provider: "pg", usePlural: true }),
 	});
 

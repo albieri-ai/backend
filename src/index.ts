@@ -19,8 +19,7 @@ import type { createGoogleGenerativeAI } from "@ai-sdk/google";
 import type { createGroq } from "@ai-sdk/groq";
 import type { createOpenAI } from "@ai-sdk/openai";
 import type Stripe from "stripe";
-import type { UIMessage } from "ai";
-import { PostHog } from "posthog-node";
+import type { PostHog } from "posthog-node";
 
 async function createServer() {
 	const server = fastify({
@@ -120,6 +119,7 @@ async function createServer() {
 
 	await server.register(AutoLoad, {
 		dir: path.join(__dirname, "plugins"),
+		scriptPattern: /(?<!\.d)\.(ts|tsx)$/,
 	});
 
 	await server.register(AutoLoad, {
@@ -168,10 +168,6 @@ declare module "fastify" {
 				openai: ReturnType<typeof createOpenAI>;
 			};
 			handlers: {
-				enhanceMessagePartsWithContext(
-					persona: string,
-					parts: UIMessage["parts"],
-				): Promise<UIMessage["parts"]>;
 				retrieveContent: (
 					persona: string,
 					embed: number[],
@@ -187,6 +183,39 @@ declare module "fastify" {
 						title: string;
 						summary: string;
 						url: string;
+					}[]
+				>;
+				retrieveCourse: (
+					persona: string,
+					embed: number[],
+				) => Promise<
+					{
+						id: string;
+						name: string;
+						summary: string;
+					}[]
+				>;
+				retrieveCourseModule: (
+					persona: string,
+					embed: number[],
+				) => Promise<
+					{
+						id: string;
+						name: string;
+						course: string;
+						summary: string;
+					}[]
+				>;
+				retrieveCourseLesson: (
+					persona: string,
+					embed: number[],
+				) => Promise<
+					{
+						id: string;
+						name: string;
+						course: string;
+						module: string;
+						summary: string;
 					}[]
 				>;
 			};
