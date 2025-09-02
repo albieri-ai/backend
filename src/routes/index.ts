@@ -34,8 +34,7 @@ export default function (
 				reply.status(response.status);
 				response.headers.forEach((value, key) => reply.header(key, value));
 				reply.send(response.body ? await response.text() : null);
-			} catch (err) {
-				fastify.log.error("Authentication Error:", err);
+			} catch {
 				reply.status(500).send({
 					error: "Internal authentication error",
 					code: "AUTH_FAILURE",

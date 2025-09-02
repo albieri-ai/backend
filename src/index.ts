@@ -119,7 +119,7 @@ async function createServer() {
 
 	await server.register(AutoLoad, {
 		dir: path.join(__dirname, "plugins"),
-		scriptPattern: /(?<!\.d)\.(ts|tsx)$/,
+		scriptPattern: /(?<!\.d)\.(js|jsx|ts|tsx)$/,
 	});
 
 	await server.register(AutoLoad, {
