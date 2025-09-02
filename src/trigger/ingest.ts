@@ -3,7 +3,7 @@ import { createDb } from "../database/db";
 import { YoutubeLoader } from "@langchain/community/document_loaders/web/youtube";
 import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
-import { embed, embedMany, generateText } from "ai";
+import { embed, embedMany, generateObject } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createGroq } from "@ai-sdk/groq";
 import { assetChunks, assetSummary, trainingAssets } from "../database/schema";
@@ -18,6 +18,7 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import Groq from "groq-sdk";
+import z from "zod";
 
 export const IngestYoutubeVideo = task({
 	id: "ingest-youtube-video",
@@ -46,8 +47,8 @@ export const IngestYoutubeVideo = task({
 			apiKey: process.env.GROQ_API_KEY,
 		});
 
-		const { text: summary } = await generateText({
-			model: groq("llama-3.3-70b-versatile"),
+		const { object } = await generateObject({
+			model: groq("openai/gpt-oss-120b"),
 			system: `\n
       - você gerará um resumo curto e conciso do texto fornecido
       - o resumo deve conter no máximo 500 caracteres
@@ -58,13 +59,17 @@ export const IngestYoutubeVideo = task({
       - não use aspas ou dois pontos
       `,
 			prompt: docs[0].pageContent,
+			schema: z.object({
+				summary: z.string(),
+				tags: z.array(z.string()),
+			}),
 		});
 
 		logger.info(`summary generated for ${payload.assetID}`);
 
 		const { embedding: summaryEmbedding } = await embed({
 			model: openai.embedding("text-embedding-3-small"),
-			value: summary,
+			value: object.summary,
 		});
 
 		const { embeddings } = await embedMany({
@@ -84,12 +89,18 @@ export const IngestYoutubeVideo = task({
 				status: "ready",
 			});
 
-			await trx.insert(assetSummary).values({
-				asset: payload.assetID,
-				summary,
-				embeddings: summaryEmbedding,
-				version: 1,
-			});
+			await trx
+				.insert(assetSummary)
+				.values({
+					asset: payload.assetID,
+					summary,
+					embeddings: summaryEmbedding,
+					version: 1,
+				})
+				.catch((err) => {
+					console.error(err);
+					throw err;
+				});
 
 			await trx.insert(assetChunks).values(
 				docOutput.map((d, index) => ({
@@ -139,8 +150,10 @@ export const IngestPdfDocument = task({
 			apiKey: process.env.GROQ_API_KEY,
 		});
 
-		const { text: summary } = await generateText({
-			model: groq("llama-3.3-70b-versatile"),
+		const {
+			object: { summary },
+		} = await generateObject({
+			model: groq("openai/gpt-oss-120b"),
 			system: `\n
       - você gerará um resumo curto e conciso do texto fornecido
       - o resumo deve conter no máximo 500 caracteres
@@ -151,6 +164,10 @@ export const IngestPdfDocument = task({
       - não use aspas ou dois pontos
       `,
 			prompt: docs[0].pageContent,
+			schema: z.object({
+				summary: z.string(),
+				tags: z.array(z.string()),
+			}),
 		});
 
 		const { embedding: summaryEmbedding } = await embed({
@@ -281,8 +298,10 @@ export const IngestVideoFile = task({
 
 		const fullText = segments.map((s) => s.text).join(" ");
 
-		const { text: summary } = await generateText({
-			model: groq("llama-3.3-70b-versatile"),
+		const {
+			object: { summary, tags },
+		} = await generateObject({
+			model: groq("openai/gpt-oss-120b"),
 			system: `\n
       - você gerará um resumo curto e conciso do texto fornecido
       - o resumo deve conter no máximo 500 caracteres
@@ -293,7 +312,14 @@ export const IngestVideoFile = task({
       - não use aspas ou dois pontos
       `,
 			prompt: fullText,
+			schema: z.object({
+				summary: z.string(),
+				tags: z.array(z.string()),
+			}),
 		});
+
+		console.log("summary: ", summary);
+		console.log("tags: ", tags);
 
 		const { embedding: summaryEmbedding } = await embed({
 			model: openai.embedding("text-embedding-3-small"),
@@ -323,12 +349,18 @@ export const IngestVideoFile = task({
 				status: "ready",
 			});
 
-			await trx.insert(assetSummary).values({
-				asset: payload.assetID,
-				summary,
-				embeddings: summaryEmbedding,
-				version: 1,
-			});
+			await trx
+				.insert(assetSummary)
+				.values({
+					asset: payload.assetID,
+					summary,
+					embeddings: summaryEmbedding,
+					version: 1,
+				})
+				.catch((err) => {
+					console.error(err);
+					throw err;
+				});
 
 			if (docOutput.length) {
 				await trx.insert(assetChunks).values(

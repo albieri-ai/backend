@@ -15,9 +15,10 @@ import {
 } from "../database/schema";
 import { and, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { IngestVideoFile } from "./ingest";
-import { embed, generateText } from "ai";
+import { embed, generateObject } from "ai";
 import { createGroq } from "@ai-sdk/groq";
 import { createOpenAI } from "@ai-sdk/openai";
+import z from "zod";
 
 export const HotmartCourseImport = task({
 	id: "hotmart-course-import",
@@ -59,6 +60,8 @@ export const HotmartCourseImport = task({
 			},
 		);
 
+		console.log("aqui");
+
 		const [{ data: normalModules }, { data: extraModules }] = await Promise.all(
 			[
 				axios.get<
@@ -98,6 +101,8 @@ export const HotmartCourseImport = task({
 			],
 		);
 
+		console.log("aqui 2");
+
 		const allModules = [...normalModules, ...extraModules];
 
 		const lessons = await Promise.all(
@@ -116,6 +121,8 @@ export const HotmartCourseImport = task({
 			),
 		).then((r) => r.flatMap((r2) => r2));
 
+		console.log("aqui 3");
+
 		const lessonsContent = await Promise.all(
 			lessons.map((l) =>
 				axios
@@ -132,37 +139,43 @@ export const HotmartCourseImport = task({
 						},
 					})
 					.then(async ({ data }) => {
-						const { data: medias } = await axios.get<
-							{
-								fileOrder: number;
-								size: number;
-								id: string;
-								fileSignedUrl: string;
-								thumborSignedUrl: string;
-								name: string;
-								creationDate: string;
-								contentType: string;
-								virtualName?: string;
-								entityId?: string;
-								expirationDate?: string;
-								countAssociation?: string;
-								playerMedia: {
-									playerKey: string;
-									status: string;
-									type: string;
-									duration: number;
-								};
-								useClubBucket?: boolean;
-							}[]
-						>(
-							`https://api-club-content.cb.hotmart.com/v4/files/entity/${l.id}/PAGE_MEDIA`,
-							{
-								headers: {
-									Authorization: `Bearer ${payload.token}`,
-									Club: clubSubdomain,
+						const { data: medias } = await axios
+							.get<
+								{
+									fileOrder: number;
+									size: number;
+									id: string;
+									fileSignedUrl: string;
+									thumborSignedUrl: string;
+									name: string;
+									creationDate: string;
+									contentType: string;
+									virtualName?: string;
+									entityId?: string;
+									expirationDate?: string;
+									countAssociation?: string;
+									playerMedia: {
+										playerKey: string;
+										status: string;
+										type: string;
+										duration: number;
+									};
+									useClubBucket?: boolean;
+								}[]
+							>(
+								`https://api-club-content.cb.hotmart.com/v4/files/entity/${l.id}/PAGE_MEDIA`,
+								{
+									headers: {
+										Authorization: `Bearer ${payload.token}`,
+										Club: clubSubdomain,
+									},
 								},
-							},
-						);
+							)
+							.catch((err) => {
+								console.log("error aqui: ", l.id);
+
+								return { data: [] };
+							});
 
 						return {
 							...data.page,
@@ -179,15 +192,22 @@ export const HotmartCourseImport = task({
 									name: n.name,
 								})),
 						};
+					})
+					.catch((err) => {
+						console.error("error on lesson: ", l.id);
+
+						return null;
 					}),
 			),
-		);
+		).then((res) => res.filter((r) => r !== null));
+
+		console.log("content: ", lessonsContent);
 
 		const { db } = await createDb({
 			connectionString: process.env.DATABASE_URL!,
 		});
 
-		await db.transaction(async (trx) => {
+		const { medias, modules } = await db.transaction(async (trx) => {
 			const [course] = await trx
 				.insert(hotmartCourses)
 				.values({
@@ -342,33 +362,47 @@ export const HotmartCourseImport = task({
 						hotmartId: hotmartVideoAssets.hotmartId,
 					});
 
-				let index = 0;
-				const step = 500;
-
-				while (index <= medias.length) {
-					const chunk = medias.slice(index, index + step);
-
-					if (chunk.length > 0) {
-						await IngestVideoFile.batchTriggerAndWait(
-							chunk.map((med) => ({
-								payload: {
-									url: videosHotmartIdMap[med.hotmartId],
-									assetID: med.asset,
-								},
-							})),
-						);
-					}
-
-					index += step;
-				}
-
-				await HotmartModuleSummarize.batchTriggerAndWait(
-					modules.map((m) => ({ payload: { id: m.id } })),
-				);
-
-				await HotmartCourseSummarize.trigger({ id: payload.id });
+				return {
+					medias: medias.map((med) => ({
+						url: videosHotmartIdMap[med.hotmartId],
+						assetId: med.asset,
+					})),
+					modules,
+				};
 			}
+
+			return { medias: [], modules };
 		});
+
+		if (!medias?.length) {
+			return;
+		}
+
+		let index = 0;
+		const step = 500;
+
+		while (index <= medias.length) {
+			const chunk = medias.slice(index, index + step);
+
+			if (chunk.length > 0) {
+				await IngestVideoFile.batchTriggerAndWait(
+					chunk.map((med) => ({
+						payload: {
+							url: med.url,
+							assetID: med.assetId,
+						},
+					})),
+				);
+			}
+
+			index += step;
+		}
+
+		await HotmartModuleSummarize.batchTriggerAndWait(
+			modules.map((m) => ({ payload: { id: m.id } })),
+		);
+
+		await HotmartCourseSummarize.trigger({ id: payload.id });
 	},
 });
 
@@ -402,8 +436,10 @@ export const HotmartModuleSummarize = task({
 			apiKey: process.env.GROQ_API_KEY,
 		});
 
-		const { text: summary } = await generateText({
-			model: groq("llama-3.3-70b-versatile"),
+		const {
+			object: { summary },
+		} = await generateObject({
+			model: groq("openai/gpt-oss-120b"),
 			system: `\n
       - você gerará um resumo curto e conciso do texto fornecido
       - o resumo deve conter no máximo 500 caracteres
@@ -425,6 +461,10 @@ export const HotmartModuleSummarize = task({
 				.join(`\n
 			---------
 			`),
+			schema: z.object({
+				summary: z.string(),
+				tags: z.array(z.string()),
+			}),
 		});
 
 		const { embedding: embeddings } = await embed({
@@ -475,8 +515,10 @@ export const HotmartCourseSummarize = task({
 			apiKey: process.env.GROQ_API_KEY,
 		});
 
-		const { text: summary } = await generateText({
-			model: groq("llama-3.3-70b-versatile"),
+		const {
+			object: { summary },
+		} = await generateObject({
+			model: groq("openai/gpt-oss-120b"),
 			system: `\n
       - você gerará um resumo curto e conciso do texto fornecido
       - o resumo deve conter no máximo 500 caracteres
@@ -498,6 +540,10 @@ export const HotmartCourseSummarize = task({
 				.join(`\n
 			---------
 			`),
+			schema: z.object({
+				summary: z.string(),
+				tags: z.array(z.string()),
+			}),
 		});
 
 		const { embedding: embeddings } = await embed({
