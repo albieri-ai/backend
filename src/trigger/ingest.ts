@@ -47,7 +47,9 @@ export const IngestYoutubeVideo = task({
 			apiKey: process.env.GROQ_API_KEY,
 		});
 
-		const { object } = await generateObject({
+		const {
+			object: { summary },
+		} = await generateObject({
 			model: groq("openai/gpt-oss-120b"),
 			system: `\n
       - você gerará um resumo curto e conciso do texto fornecido
@@ -69,7 +71,7 @@ export const IngestYoutubeVideo = task({
 
 		const { embedding: summaryEmbedding } = await embed({
 			model: openai.embedding("text-embedding-3-small"),
-			value: object.summary,
+			value: summary,
 		});
 
 		const { embeddings } = await embedMany({
