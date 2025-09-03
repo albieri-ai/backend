@@ -26,7 +26,10 @@ export default function (
 			const courses = await fastify.db
 				.select({
 					...getTableColumns(hotmartCourses),
-					videoCount: hotmartCourseVideoCount.count,
+					videoCount:
+						sql`COALESCE(${hotmartCourseVideoCount.count}, 0)::INTEGER`.as(
+							"video_count",
+						),
 				})
 				.from(hotmartCourses)
 				.leftJoin(

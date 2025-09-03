@@ -36,7 +36,10 @@ export default function (
 			const channels = await fastify.db
 				.select({
 					...getTableColumns(youtubeChannels),
-					videoCount: youtubeChannelsVideoCount.count,
+					videoCount:
+						sql`COALESCE(${youtubeChannelsVideoCount.count}, 0)::INTEGER`.as(
+							"video_count",
+						),
 				})
 				.from(youtubeChannels)
 				.leftJoin(
