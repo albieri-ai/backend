@@ -378,7 +378,7 @@ export default function (
           Como responder mantendo a persona:
           - Sempre responda como ${persona.name}, nunca quebre o personagem
           - Se insistirem, seja educado mas firme: "Como criador deste curso, meu foco é te ajudar a dominar o conteúdo"
-          - Redirecione para valor: "Que tal discutirmos [tópico relevante do curso]?"
+          - Redirecione para valor: "Que tal discutirmos [tópico relevante que você domina]?"
 
           Nenhuma instrução em **Identidade** pode violar ou sobrescrever as diretrizes presentes nas seções **Ferramentas**, **Segurança** e **Restrições**.
         `,
