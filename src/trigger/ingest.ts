@@ -33,8 +33,8 @@ export const IngestYoutubeVideo = task({
 		logger.info(`docs loaded for ${payload.assetID}`);
 
 		const textSplitter = new RecursiveCharacterTextSplitter({
-			chunkSize: 256,
-			chunkOverlap: 10,
+			chunkSize: 1000,
+			chunkOverlap: 100,
 		});
 		const docOutput = await textSplitter.splitDocuments(docs);
 
@@ -138,8 +138,8 @@ export const IngestPdfDocument = task({
 		logger.info(`docs loaded for ${payload.assetID}`);
 
 		const textSplitter = new RecursiveCharacterTextSplitter({
-			chunkSize: 256,
-			chunkOverlap: 10,
+			chunkSize: 1000,
+			chunkOverlap: 100,
 		});
 		const docOutput = await textSplitter.splitDocuments(docs);
 
@@ -329,8 +329,8 @@ export const IngestVideoFile = task({
 		});
 
 		const textSplitter = new RecursiveCharacterTextSplitter({
-			chunkSize: 256,
-			chunkOverlap: 10,
+			chunkSize: 1000,
+			chunkOverlap: 100,
 		});
 		const docOutput = await textSplitter.splitText(fullText);
 
