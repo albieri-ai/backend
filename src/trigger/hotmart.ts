@@ -16,9 +16,8 @@ import {
 import { and, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { IngestVideoFile } from "./ingest";
 import { embed, generateObject } from "ai";
-import { createGroq } from "@ai-sdk/groq";
-import { createOpenAI } from "@ai-sdk/openai";
 import z from "zod";
+import { gptOss120, openai } from "./common";
 
 export const HotmartCourseImport = task({
 	id: "hotmart-course-import",
@@ -59,8 +58,6 @@ export const HotmartCourseImport = task({
 				},
 			},
 		);
-
-		console.log("aqui");
 
 		const [{ data: normalModules }, { data: extraModules }] = await Promise.all(
 			[
@@ -417,6 +414,7 @@ export const HotmartModuleSummarize = task({
 			.select({
 				title: hotmartCourseLessons.name,
 				summary: assetSummary.summary,
+				persona: trainingAssets.persona,
 			})
 			.from(assetSummary)
 			.leftJoin(
@@ -427,19 +425,17 @@ export const HotmartModuleSummarize = task({
 				hotmartCourseLessons,
 				eq(hotmartCourseLessons.id, hotmartVideoAssets.lesson),
 			)
+			.leftJoin(trainingAssets, eq(trainingAssets.id, assetSummary.asset))
 			.where(eq(hotmartCourseLessons.module, payload.id));
 
-		const openai = createOpenAI({
-			apiKey: process.env.OPENAI_API_KEY,
-		});
-		const groq = createGroq({
-			apiKey: process.env.GROQ_API_KEY,
-		});
+		if (!lessonsSummary.length) {
+			return;
+		}
 
 		const {
 			object: { summary },
 		} = await generateObject({
-			model: groq("openai/gpt-oss-120b"),
+			model: gptOss120(),
 			system: `\n
       - você gerará um resumo curto e conciso do texto fornecido
       - o resumo deve conter no máximo 500 caracteres
@@ -508,17 +504,14 @@ export const HotmartCourseSummarize = task({
 			)
 			.where(eq(hotmartCourseModules.course, payload.id));
 
-		const openai = createOpenAI({
-			apiKey: process.env.OPENAI_API_KEY,
-		});
-		const groq = createGroq({
-			apiKey: process.env.GROQ_API_KEY,
-		});
+		if (!modulesSummary?.length) {
+			return;
+		}
 
 		const {
 			object: { summary },
 		} = await generateObject({
-			model: groq("openai/gpt-oss-120b"),
+			model: gptOss120(),
 			system: `\n
       - você gerará um resumo curto e conciso do texto fornecido
       - o resumo deve conter no máximo 500 caracteres

@@ -4,8 +4,6 @@ import { YoutubeLoader } from "@langchain/community/document_loaders/web/youtube
 import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { embed, embedMany, generateObject } from "ai";
-import { createOpenAI } from "@ai-sdk/openai";
-import { createGroq } from "@ai-sdk/groq";
 import { assetChunks, assetSummary, trainingAssets } from "../database/schema";
 import axios from "axios";
 import fs from "node:fs";
@@ -19,6 +17,7 @@ import {
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import Groq from "groq-sdk";
 import z from "zod";
+import { gptOss120, openai } from "./common";
 
 export const IngestYoutubeVideo = task({
 	id: "ingest-youtube-video",
@@ -40,17 +39,10 @@ export const IngestYoutubeVideo = task({
 
 		logger.info(`docs splitted for ${payload.assetID}`);
 
-		const openai = createOpenAI({
-			apiKey: process.env.OPENAI_API_KEY,
-		});
-		const groq = createGroq({
-			apiKey: process.env.GROQ_API_KEY,
-		});
-
 		const {
 			object: { summary },
 		} = await generateObject({
-			model: groq("openai/gpt-oss-120b"),
+			model: gptOss120(),
 			system: `\n
       - você gerará um resumo curto e conciso do texto fornecido
       - o resumo deve conter no máximo 500 caracteres
@@ -145,17 +137,10 @@ export const IngestPdfDocument = task({
 
 		logger.info(`docs splitted for ${payload.assetID}`);
 
-		const openai = createOpenAI({
-			apiKey: process.env.OPENAI_API_KEY,
-		});
-		const groq = createGroq({
-			apiKey: process.env.GROQ_API_KEY,
-		});
-
 		const {
 			object: { summary },
 		} = await generateObject({
-			model: groq("openai/gpt-oss-120b"),
+			model: gptOss120(),
 			system: `\n
       - você gerará um resumo curto e conciso do texto fornecido
       - o resumo deve conter no máximo 500 caracteres
@@ -222,12 +207,6 @@ export const IngestVideoFile = task({
 		const fileName = `${createId()}.mp3`;
 		const outputPath = `/tmp/${fileName}`;
 
-		const openai = createOpenAI({
-			apiKey: process.env.OPENAI_API_KEY,
-		});
-		const groq = createGroq({
-			apiKey: process.env.GROQ_API_KEY,
-		});
 		const groqSdk = new Groq({
 			apiKey: process.env.GROQ_API_KEY,
 		});
@@ -303,7 +282,7 @@ export const IngestVideoFile = task({
 		const {
 			object: { summary, tags },
 		} = await generateObject({
-			model: groq("openai/gpt-oss-120b"),
+			model: gptOss120(),
 			system: `\n
       - você gerará um resumo curto e conciso do texto fornecido
       - o resumo deve conter no máximo 500 caracteres
