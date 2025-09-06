@@ -299,9 +299,6 @@ export const IngestVideoFile = task({
 			}),
 		});
 
-		console.log("summary: ", summary);
-		console.log("tags: ", tags);
-
 		const { embedding: summaryEmbedding } = await embed({
 			model: openai.embedding("text-embedding-3-small"),
 			value: summary,

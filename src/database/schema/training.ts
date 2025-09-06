@@ -9,6 +9,7 @@ import {
 	vector,
 	integer,
 	index,
+	uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { personas } from "./personas";
 import { users } from "./auth";
@@ -16,6 +17,7 @@ import { files } from "./storage";
 import { youtubeChannelsVideos } from "./youtube";
 import { createId } from "@paralleldrive/cuid2";
 import { hotmartCourseLessons } from "./hotmart";
+import { vimeoAccounts } from "./vimeo";
 
 export const TrainingAssetType = pgEnum("training_asset_type", [
 	"file",
@@ -23,6 +25,7 @@ export const TrainingAssetType = pgEnum("training_asset_type", [
 	"youtube_video",
 	"webpage",
 	"hotmart",
+	"vimeo_file",
 ]);
 
 export const TrainingAssetStatus = pgEnum("training_asset_status", [
@@ -71,6 +74,24 @@ export const youtubeVideoAssets = pgTable(
 	},
 	(table) => ({
 		youtubeVideoAssetsAssetIdx: index().on(table.asset),
+	}),
+);
+
+export const vimeoVideoAssets = pgTable(
+	"vimeo_video_assets",
+	{
+		id: serial().primaryKey(),
+		asset: text()
+			.notNull()
+			.references(() => trainingAssets.id, { onDelete: "cascade" }),
+		vimeoId: text().notNull(),
+		vimeoAccount: text()
+			.notNull()
+			.references(() => vimeoAccounts.id, { onDelete: "cascade" }),
+	},
+	(table) => ({
+		vimeoVideoAssetAssetIdx: uniqueIndex().on(table.asset),
+		vimeoVideoAccountIdIdx: index().on(table.vimeoAccount),
 	}),
 );
 

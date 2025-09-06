@@ -12,6 +12,8 @@ import {
 	webPageAssets,
 	hotmartVideoAssets,
 	hotmartCourseLessons,
+	vimeoVideoAssets,
+	vimeoAccounts,
 } from "../../../../database/schema";
 import { personas } from "../../../../database/schema";
 import { and, isNull, eq, sql, count, asc, desc, ilike } from "drizzle-orm";
@@ -343,16 +345,6 @@ export default function (
 			preHandler: [adminOnly(fastify)],
 		},
 		async (request, reply) => {
-			const [persona] = await fastify.db
-				.select()
-				.from(personas)
-				.where(
-					and(
-						eq(personas.slug, request.params.slug),
-						isNull(personas.deletedAt),
-					),
-				);
-
 			const asset = await fastify.db.transaction(async (trx) => {
 				const asset = await trx
 					.insert(trainingAssets)
@@ -360,7 +352,7 @@ export default function (
 						type: "youtube_video",
 						status: "pending",
 						enabled: true,
-						persona: persona.id,
+						persona: request.persona!.id,
 						createdBy: request.user!.id,
 					})
 					.returning({ id: trainingAssets.id })
@@ -391,6 +383,68 @@ export default function (
 			await IngestYoutubeVideo.trigger({
 				assetID: asset.id,
 				url: asset.url,
+			});
+
+			reply.code(204).send();
+		},
+	);
+
+	fastify.post<{
+		Params: { slug: string };
+		Body: { url: string; vimeo_id: string };
+	}>(
+		"/assets/vimeo",
+		{
+			schema: {
+				params: z.object({
+					slug: z.string(),
+				}),
+				body: z.object({
+					url: z.string().url(),
+					vimeo_id: z.string(),
+					vimeo_account: z.string(),
+				}),
+			},
+			preHandler: [adminOnly(fastify)],
+		},
+		async (request, reply) => {
+			await fastify.db.transaction(async (trx) => {
+				const [account] = await trx
+					.select()
+					.from(vimeoAccounts)
+					.where(
+						and(
+							eq(vimeoAccounts.persona, request.persona!.id),
+							isNull(vimeoAccounts.disabledAt),
+						),
+					);
+
+				if (!account) {
+					throw new Error("Vimeo account not found");
+				}
+
+				const asset = await trx
+					.insert(trainingAssets)
+					.values({
+						type: "vimeo_file",
+						status: "pending",
+						enabled: true,
+						persona: request.persona!.id,
+						createdBy: request.user!.id,
+					})
+					.returning({ id: trainingAssets.id })
+					.then(([res]) => res);
+
+				await trx.insert(vimeoVideoAssets).values({
+					asset: asset.id,
+					vimeoId: request.body.vimeo_id,
+					vimeoAccount: account.id,
+				});
+
+				await IngestVideoFile.trigger({
+					assetID: asset.id,
+					url: request.body.url,
+				});
 			});
 
 			reply.code(204).send();

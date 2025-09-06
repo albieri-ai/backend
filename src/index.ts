@@ -62,6 +62,8 @@ async function createServer() {
 				"STRIPE_WEBHOOK_SECRET",
 				"APP_ENV",
 				"RESEND_API_KEY",
+				"VIMEO_CLIENT_ID",
+				"VIMEO_CLIENT_SECRET",
 			],
 			properties: {
 				PORT: {
@@ -113,6 +115,12 @@ async function createServer() {
 				RESEND_API_KEY: {
 					type: "string",
 				},
+				VIMEO_CLIENT_ID: {
+					type: "string",
+				},
+				VIMEO_CLIENT_SECRET: {
+					type: "string",
+				},
 			},
 		},
 	});
@@ -155,6 +163,8 @@ declare module "fastify" {
 			STRIPE_WEBHOOK_SECRET: string;
 			APP_ENV: string;
 			RESEND_API_KEY: string;
+			VIMEO_CLIENT_ID: string;
+			VIMEO_CLIENT_SECRET: string;
 		};
 		db: NodePgDatabase<typeof schema> & { $client: pg.Client };
 		auth: typeof auth;
