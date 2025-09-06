@@ -2,12 +2,13 @@ import type { FastifyInstance, FastifyServerOptions } from "fastify";
 import {
 	members,
 	organizations,
+	type personas,
 	stripeCustomerId,
 	subscriptionLimits,
 	subscriptions,
 	subscriptionUsageTrackWorkflow,
 } from "../../../../database/schema";
-import { eq } from "drizzle-orm";
+import { eq, type InferSelectModel } from "drizzle-orm";
 import { TrackSubscriptionUsage } from "../../../../trigger/subscription";
 import { schedules } from "@trigger.dev/sdk";
 
@@ -61,6 +62,14 @@ export default function (
 				.limit(1)
 				.then(([res]) => res);
 
+			let persona: InferSelectModel<typeof personas> | null = null;
+
+			if (userOrganization) {
+				persona = (await trx.query.personas.findFirst({
+					where: (p, { eq }) => eq(p.organization, userOrganization?.id),
+				})) as InferSelectModel<typeof personas> | null;
+			}
+
 			const insertedSubscription = await trx
 				.insert(subscriptions)
 				.values({
@@ -97,6 +106,15 @@ export default function (
 					value: "1000000",
 				},
 			]);
+
+			fastify.posthog.capture({
+				event: "subscription created",
+				distinctId: dbUser.id,
+				properties: {
+					organization: userOrganization?.id,
+					persona: persona?.id,
+				},
+			});
 
 			return insertedSubscription;
 		});

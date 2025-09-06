@@ -210,9 +210,20 @@ export default function (
 					),
 				);
 
+			const gptOss = withTracing(
+				fastify.ai.providers.groq("openai/gpt-oss-120b"),
+				fastify.posthog,
+				{
+					posthogDistinctId: request.user?.id,
+					posthogProperties: { chat_id: chat?.id },
+					posthogPrivacyMode: false,
+					posthogGroups: { persona: request.persona!.id },
+				},
+			);
+
 			if (!chat) {
 				const { text: title } = await generateText({
-					model: fastify.ai.providers.groq("llama-3.1-8b-instant"),
+					model: gptOss,
 					system: `\n
         - você gerará um título curto com base na primeira mensagem com a qual o usuário inicia a conversa
         - certifique-se de que não tenha mais de 80 caracteres
