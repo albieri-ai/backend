@@ -84,6 +84,14 @@ const authPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 							author: newUser.user.id,
 						})
 						.where(eq(threads.author, anonymousUser.user.id));
+
+					fastify.posthog.capture({
+						distinctId: newUser.user.id,
+						event: "$merge_dangerously",
+						properties: {
+							alias: anonymousUser.user.id,
+						},
+					});
 				},
 			}),
 		],
@@ -110,5 +118,5 @@ const authPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 export default fp(authPlugin, {
 	name: "auth",
 	fastify: ">=4.0.0",
-	dependencies: ["@fastify/env", "database"],
+	dependencies: ["@fastify/env", "database", "posthog"],
 });
