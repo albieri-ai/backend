@@ -75,6 +75,7 @@
     "react-dom": "19.1.1",
     "react-email": "^4.2.8",
     "resend": "^6.0.1",
+    "rss-parser": "^3.13.0",
     "stripe": "^18.4.0",
     "url-metadata": "^5.2.2",
     "vimeo": "^2.3.1",

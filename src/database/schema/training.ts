@@ -18,6 +18,8 @@ import { youtubeChannelsVideos } from "./youtube";
 import { createId } from "@paralleldrive/cuid2";
 import { hotmartCourseLessons } from "./hotmart";
 import { vimeoAccounts } from "./vimeo";
+import { rssFeeds } from "./rss";
+import { isNull } from "drizzle-orm";
 
 export const TrainingAssetType = pgEnum("training_asset_type", [
 	"file",
@@ -26,6 +28,7 @@ export const TrainingAssetType = pgEnum("training_asset_type", [
 	"webpage",
 	"hotmart",
 	"vimeo_file",
+	"rss_feed",
 ]);
 
 export const TrainingAssetStatus = pgEnum("training_asset_status", [
@@ -54,7 +57,9 @@ export const trainingAssets = pgTable(
 		deletedAt: timestamp(),
 	},
 	(table) => ({
-		trainigAssetsPersonaIdx: index().on(table.persona, table.enabled),
+		trainigAssetsPersonaIdx: index()
+			.on(table.persona, table.enabled)
+			.where(isNull(table.deletedAt)),
 	}),
 );
 
@@ -84,6 +89,7 @@ export const vimeoVideoAssets = pgTable(
 		asset: text()
 			.notNull()
 			.references(() => trainingAssets.id, { onDelete: "cascade" }),
+		title: text().default("Título não disponível").notNull(),
 		vimeoId: text().notNull(),
 		vimeoAccount: text()
 			.notNull()
@@ -95,17 +101,43 @@ export const vimeoVideoAssets = pgTable(
 	}),
 );
 
-export const hotmartVideoAssets = pgTable("hotmart_video_assets", {
-	id: serial().primaryKey(),
-	asset: text()
-		.notNull()
-		.references(() => trainingAssets.id, { onDelete: "cascade" }),
-	lesson: text().references(() => hotmartCourseLessons.id, {
-		onDelete: "cascade",
+export const rssFeedAssets = pgTable(
+	"rss_feed_assets",
+	{
+		id: serial().primaryKey(),
+		feed: text()
+			.notNull()
+			.references(() => rssFeeds.id, { onDelete: "cascade" }),
+		asset: text()
+			.notNull()
+			.references(() => trainingAssets.id, { onDelete: "cascade" }),
+		title: text().notNull(),
+		rssGuid: text().notNull(),
+	},
+	(table) => ({
+		rssFeedAssetsFeedIdx: index().on(table.feed),
+		rssFeedAssetsAssetIdx: index().on(table.asset),
 	}),
-	hotmartId: text().notNull(),
-	name: text().notNull(),
-});
+);
+
+export const hotmartVideoAssets = pgTable(
+	"hotmart_video_assets",
+	{
+		id: serial().primaryKey(),
+		asset: text()
+			.notNull()
+			.references(() => trainingAssets.id, { onDelete: "cascade" }),
+		lesson: text().references(() => hotmartCourseLessons.id, {
+			onDelete: "cascade",
+		}),
+		hotmartId: text().notNull(),
+		name: text().notNull(),
+	},
+	(table) => ({
+		hotmartVideoAssetsAssetIdx: index().on(table.asset),
+		hotmartVideoAssetsLessonIdx: uniqueIndex().on(table.lesson),
+	}),
+);
 
 export const fileAssets = pgTable(
 	"file_assets",
@@ -120,6 +152,7 @@ export const fileAssets = pgTable(
 	},
 	(table) => ({
 		fileAssetsAssetIdx: index().on(table.asset),
+		fileAssetsFileIdIdx: uniqueIndex().on(table.fileId),
 	}),
 );
 

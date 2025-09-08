@@ -1,6 +1,6 @@
 {
-	"id": "e3a97181-1c58-4651-96b9-ae92e5a7d783",
-	"prevId": "6aa4b3bf-e2e4-4b4d-8970-db846bc8e847",
+	"id": "a0aaf2f2-7606-49a0-b3cf-b73d6c34090e",
+	"prevId": "e3a97181-1c58-4651-96b9-ae92e5a7d783",
 	"version": "7",
 	"dialect": "postgresql",
 	"tables": {
@@ -1391,6 +1391,126 @@
 			"checkConstraints": {},
 			"isRLSEnabled": false
 		},
+		"public.rss_feeds": {
+			"name": "rss_feeds",
+			"schema": "",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true
+				},
+				"persona": {
+					"name": "persona",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"url": {
+					"name": "url",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"keep_synced": {
+					"name": "keep_synced",
+					"type": "boolean",
+					"primaryKey": false,
+					"notNull": true,
+					"default": false
+				},
+				"name": {
+					"name": "name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"trigger_id": {
+					"name": "trigger_id",
+					"type": "varchar",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"created_by": {
+					"name": "created_by",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"disabled_by": {
+					"name": "disabled_by",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": false,
+					"default": "now()"
+				},
+				"disabled_at": {
+					"name": "disabled_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": false
+				}
+			},
+			"indexes": {
+				"rss_feeds_persona_index": {
+					"name": "rss_feeds_persona_index",
+					"columns": [
+						{
+							"expression": "persona",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": false,
+					"where": "\"rss_feeds\".\"disabled_at\" is null",
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				}
+			},
+			"foreignKeys": {
+				"rss_feeds_persona_personas_id_fk": {
+					"name": "rss_feeds_persona_personas_id_fk",
+					"tableFrom": "rss_feeds",
+					"tableTo": "personas",
+					"columnsFrom": ["persona"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"rss_feeds_created_by_users_id_fk": {
+					"name": "rss_feeds_created_by_users_id_fk",
+					"tableFrom": "rss_feeds",
+					"tableTo": "users",
+					"columnsFrom": ["created_by"],
+					"columnsTo": ["id"],
+					"onDelete": "set null",
+					"onUpdate": "no action"
+				},
+				"rss_feeds_disabled_by_users_id_fk": {
+					"name": "rss_feeds_disabled_by_users_id_fk",
+					"tableFrom": "rss_feeds",
+					"tableTo": "users",
+					"columnsFrom": ["disabled_by"],
+					"columnsTo": ["id"],
+					"onDelete": "set null",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
 		"public.files": {
 			"name": "files",
 			"schema": "",
@@ -2057,6 +2177,21 @@
 					"concurrently": false,
 					"method": "btree",
 					"with": {}
+				},
+				"file_assets_file_id_index": {
+					"name": "file_assets_file_id_index",
+					"columns": [
+						{
+							"expression": "file_id",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": true,
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
 				}
 			},
 			"foreignKeys": {
@@ -2126,7 +2261,38 @@
 					"notNull": true
 				}
 			},
-			"indexes": {},
+			"indexes": {
+				"hotmart_video_assets_asset_index": {
+					"name": "hotmart_video_assets_asset_index",
+					"columns": [
+						{
+							"expression": "asset",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": false,
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				},
+				"hotmart_video_assets_lesson_index": {
+					"name": "hotmart_video_assets_lesson_index",
+					"columns": [
+						{
+							"expression": "lesson",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": true,
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				}
+			},
 			"foreignKeys": {
 				"hotmart_video_assets_asset_training_assets_id_fk": {
 					"name": "hotmart_video_assets_asset_training_assets_id_fk",
@@ -2142,6 +2308,99 @@
 					"tableFrom": "hotmart_video_assets",
 					"tableTo": "hotmart_course_lessons",
 					"columnsFrom": ["lesson"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"public.rss_feed_assets": {
+			"name": "rss_feed_assets",
+			"schema": "",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "serial",
+					"primaryKey": true,
+					"notNull": true
+				},
+				"feed": {
+					"name": "feed",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"asset": {
+					"name": "asset",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"title": {
+					"name": "title",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"rss_guid": {
+					"name": "rss_guid",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				}
+			},
+			"indexes": {
+				"rss_feed_assets_feed_index": {
+					"name": "rss_feed_assets_feed_index",
+					"columns": [
+						{
+							"expression": "feed",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": false,
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				},
+				"rss_feed_assets_asset_index": {
+					"name": "rss_feed_assets_asset_index",
+					"columns": [
+						{
+							"expression": "asset",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": false,
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				}
+			},
+			"foreignKeys": {
+				"rss_feed_assets_feed_rss_feeds_id_fk": {
+					"name": "rss_feed_assets_feed_rss_feeds_id_fk",
+					"tableFrom": "rss_feed_assets",
+					"tableTo": "rss_feeds",
+					"columnsFrom": ["feed"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"rss_feed_assets_asset_training_assets_id_fk": {
+					"name": "rss_feed_assets_asset_training_assets_id_fk",
+					"tableFrom": "rss_feed_assets",
+					"tableTo": "training_assets",
+					"columnsFrom": ["asset"],
 					"columnsTo": ["id"],
 					"onDelete": "cascade",
 					"onUpdate": "no action"
@@ -2235,6 +2494,7 @@
 						}
 					],
 					"isUnique": false,
+					"where": "\"training_assets\".\"deleted_at\" is null",
 					"concurrently": false,
 					"method": "btree",
 					"with": {}
@@ -2290,6 +2550,13 @@
 					"type": "text",
 					"primaryKey": false,
 					"notNull": true
+				},
+				"title": {
+					"name": "title",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'Título não disponível'"
 				},
 				"vimeo_id": {
 					"name": "vimeo_id",
@@ -2865,7 +3132,8 @@
 				"youtube_video",
 				"webpage",
 				"hotmart",
-				"vimeo_file"
+				"vimeo_file",
+				"rss_feed"
 			]
 		}
 	},
@@ -2927,7 +3195,7 @@
 					"notNull": true
 				}
 			},
-			"definition": "select \"hotmart_course_modules\".\"course\", count(\"hotmart_course_lessons\".\"id\") as \"count\" from \"hotmart_course_lessons\" left join \"hotmart_course_modules\" on \"hotmart_course_modules\".\"id\" = \"hotmart_course_lessons\".\"module\" group by \"hotmart_course_modules\".\"course\"",
+			"definition": "select \"hotmart_course_modules\".\"course\", count(\"hotmart_course_lessons\".\"id\") as \"count\" from \"hotmart_course_lessons\" left join \"hotmart_course_modules\" on \"hotmart_course_modules\".\"id\" = \"hotmart_course_lessons\".\"module\" left join \"training_assets\" on \"hotmart_video_assets\".\"asset\" = \"training_assets\".\"id\" where \"training_assets\".\"deleted_at\" is null group by \"hotmart_course_modules\".\"course\"",
 			"name": "hotmart_course_lesson_count",
 			"schema": "public",
 			"isExisting": false,
@@ -2942,8 +3210,23 @@
 					"notNull": true
 				}
 			},
-			"definition": "select \"hotmart_course_modules\".\"course\", count(\"hotmart_video_assets\".\"id\") as \"count\" from \"hotmart_video_assets\" left join \"hotmart_course_lessons\" on \"hotmart_course_lessons\".\"id\" = \"hotmart_video_assets\".\"lesson\" left join \"hotmart_course_modules\" on \"hotmart_course_modules\".\"id\" = \"hotmart_course_lessons\".\"module\" group by \"hotmart_course_modules\".\"course\"",
+			"definition": "select \"hotmart_course_modules\".\"course\", count(\"hotmart_video_assets\".\"id\") as \"count\" from \"hotmart_video_assets\" left join \"hotmart_course_lessons\" on \"hotmart_course_lessons\".\"id\" = \"hotmart_video_assets\".\"lesson\" left join \"hotmart_course_modules\" on \"hotmart_course_modules\".\"id\" = \"hotmart_course_lessons\".\"module\" left join \"training_assets\" on \"hotmart_video_assets\".\"asset\" = \"training_assets\".\"id\" where \"training_assets\".\"deleted_at\" is null group by \"hotmart_course_modules\".\"course\"",
 			"name": "hotmart_course_video_count",
+			"schema": "public",
+			"isExisting": false,
+			"materialized": false
+		},
+		"public.rss_feed_asset_count": {
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true
+				}
+			},
+			"definition": "select \"rss_feeds\".\"id\", count(\"rss_feed_assets\".\"id\") as \"count\" from \"rss_feed_assets\" left join \"rss_feeds\" on \"rss_feeds\".\"id\" = \"rss_feed_assets\".\"feed\" left join \"training_assets\" on \"training_assets\".\"id\" = \"rss_feed_assets\".\"asset\" where \"training_assets\".\"deleted_at\" is null group by \"rss_feeds\".\"id\"",
+			"name": "rss_feed_asset_count",
 			"schema": "public",
 			"isExisting": false,
 			"materialized": false
@@ -2957,7 +3240,7 @@
 					"notNull": true
 				}
 			},
-			"definition": "select \"channel\", count(\"id\") as \"count\" from \"youtube_channels_videos\" group by \"youtube_channels_videos\".\"channel\"",
+			"definition": "select \"youtube_channels_videos\".\"channel\", count(\"youtube_channels_videos\".\"id\") as \"count\" from \"youtube_channels_videos\" left join \"youtube_video_assets\" on \"youtube_channels_videos\".\"id\" = \"youtube_video_assets\".\"channel_video\" left join \"training_assets\" on \"training_assets\".\"id\" = \"youtube_video_assets\".\"asset\" where \"training_assets\".\"deleted_at\" is null group by \"youtube_channels_videos\".\"channel\"",
 			"name": "youtube_channels_video_count",
 			"schema": "public",
 			"isExisting": false,

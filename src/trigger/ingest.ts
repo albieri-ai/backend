@@ -201,64 +201,16 @@ export const IngestPdfDocument = task({
 	},
 });
 
-export const IngestVideoFile = task({
-	id: "ingest-video-file",
-	run: async (payload: { url: string; assetID: string }) => {
-		const fileName = `${createId()}.mp3`;
-		const outputPath = `/tmp/${fileName}`;
-
+export const IngestAudioFile = task({
+	id: "ingest-audio-file",
+	run: async (payload: { assetID: string; url: string }) => {
 		const groqSdk = new Groq({
 			apiKey: process.env.GROQ_API_KEY,
 		});
 
-		const extractAudio = async () =>
-			new Promise((resolve, reject) => {
-				ffmpeg(payload.url)
-					.noVideo()
-					.audioChannels(1)
-					.audioFrequency(16000)
-					.audioBitrate("64k")
-					.outputFormat("mp3")
-					.save(outputPath)
-					.on("end", resolve)
-					.on("error", reject);
-			});
-
-		await extractAudio();
-
-		logger.log("audio file downloaded");
-
-		const s3Client = new S3Client({
-			region: "us-east-1",
-			credentials: {
-				accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-				secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-			},
-		});
-
-		const command = new PutObjectCommand({
-			Bucket: process.env.AWS_S3_TEMPORARY_BUCKET,
-			Key: fileName,
-			Body: fs.readFileSync(outputPath),
-			ContentType: "audio/mpeg", // important for mp3 files
-		});
-
-		await s3Client.send(command);
-
-		const getCommand = new GetObjectCommand({
-			Bucket: process.env.AWS_S3_TEMPORARY_BUCKET,
-			Key: fileName,
-		});
-
-		const url = await getSignedUrl(s3Client, getCommand, {
-			expiresIn: 259200,
-		});
-
-		logger.log("audio file uploaded");
-
 		const transcription = (await groqSdk.audio.transcriptions.create({
 			model: "whisper-large-v3-turbo",
-			url,
+			url: payload.url,
 			response_format: "verbose_json",
 		})) as unknown as {
 			segments: {
@@ -280,7 +232,7 @@ export const IngestVideoFile = task({
 		const fullText = segments.map((s) => s.text).join(" ");
 
 		const {
-			object: { summary, tags },
+			object: { summary },
 		} = await generateObject({
 			model: gptOss120(),
 			system: `\n
@@ -295,7 +247,7 @@ export const IngestVideoFile = task({
 			prompt: fullText,
 			schema: z.object({
 				summary: z.string(),
-				tags: z.array(z.string()),
+				// tags: z.array(z.string()),
 			}),
 		});
 
@@ -352,5 +304,63 @@ export const IngestVideoFile = task({
 		});
 
 		logger.info(`infos saved in db for: ${payload.assetID}`);
+	},
+});
+
+export const IngestVideoFile = task({
+	id: "ingest-video-file",
+	run: async (payload: { url: string; assetID: string }) => {
+		const fileName = `${createId()}.mp3`;
+		const outputPath = `/tmp/${fileName}`;
+
+		const extractAudio = async () =>
+			new Promise((resolve, reject) => {
+				ffmpeg(payload.url)
+					.noVideo()
+					.audioChannels(1)
+					.audioFrequency(16000)
+					.audioBitrate("64k")
+					.outputFormat("mp3")
+					.save(outputPath)
+					.on("end", resolve)
+					.on("error", reject);
+			});
+
+		await extractAudio();
+
+		logger.log("audio file downloaded");
+
+		const s3Client = new S3Client({
+			region: "us-east-1",
+			credentials: {
+				accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+				secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+			},
+		});
+
+		const command = new PutObjectCommand({
+			Bucket: process.env.AWS_S3_TEMPORARY_BUCKET,
+			Key: fileName,
+			Body: fs.readFileSync(outputPath),
+			ContentType: "audio/mpeg", // important for mp3 files
+		});
+
+		await s3Client.send(command);
+
+		const getCommand = new GetObjectCommand({
+			Bucket: process.env.AWS_S3_TEMPORARY_BUCKET,
+			Key: fileName,
+		});
+
+		const url = await getSignedUrl(s3Client, getCommand, {
+			expiresIn: 259200,
+		});
+
+		logger.log("audio file uploaded");
+
+		await IngestAudioFile.trigger({
+			assetID: payload.assetID,
+			url,
+		});
 	},
 });

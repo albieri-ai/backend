@@ -12,7 +12,7 @@ import {
 	youtubeChannelsVideos,
 } from "../../../../../../database/schema/youtube";
 import {
-	MonitorYoutubeChannel,
+	ParseYoutubeChannel,
 	MonitorYoutubeChannelSchedule,
 } from "../../../../../../trigger/youtube";
 import { schedules } from "@trigger.dev/sdk";
@@ -36,9 +36,9 @@ export default function (
 			const channels = await fastify.db
 				.select({
 					...getTableColumns(youtubeChannels),
-					videoCount:
+					assetCount:
 						sql`COALESCE(${youtubeChannelsVideoCount.count}, 0)::INTEGER`.as(
-							"video_count",
+							"asset_count",
 						),
 				})
 				.from(youtubeChannels)
@@ -146,7 +146,7 @@ export default function (
 					})
 					.returning();
 
-				await MonitorYoutubeChannel.trigger(
+				await ParseYoutubeChannel.trigger(
 					{
 						id: channel.id,
 						persona: persona.id,

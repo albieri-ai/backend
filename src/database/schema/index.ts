@@ -3,6 +3,7 @@ export * from "./general";
 export * from "./hotmart";
 export * from "./monetization";
 export * from "./personas";
+export * from "./rss";
 export * from "./statistics";
 export * from "./storage";
 export * from "./subscriptions";

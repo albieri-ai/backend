@@ -14,6 +14,7 @@ import {
 	hotmartCourseLessons,
 	vimeoVideoAssets,
 	vimeoAccounts,
+	rssFeedAssets,
 } from "../../../../database/schema";
 import { personas } from "../../../../database/schema";
 import { and, isNull, eq, sql, count, asc, desc, ilike } from "drizzle-orm";
@@ -105,7 +106,7 @@ export default function (
 					.select({
 						id: trainingAssets.id,
 						source: trainingAssets.type,
-						name: sql`COALESCE(${youtubeVideoAssets.title}, ${files.originalName}, ${files.name}, ${webPageAssets.title}, ${hotmartCourseLessons.name})`.as(
+						name: sql`COALESCE(${youtubeVideoAssets.title}, ${files.originalName}, ${files.name}, ${webPageAssets.title}, ${hotmartCourseLessons.name}, ${vimeoVideoAssets.title}, ${rssFeedAssets.title})`.as(
 							"name",
 						),
 						enabled: trainingAssets.enabled,
@@ -128,6 +129,11 @@ export default function (
 						hotmartCourseLessons,
 						eq(hotmartCourseLessons.id, hotmartVideoAssets.lesson),
 					)
+					.leftJoin(
+						vimeoVideoAssets,
+						eq(vimeoVideoAssets.asset, trainingAssets.id),
+					)
+					.leftJoin(rssFeedAssets, eq(rssFeedAssets.asset, trainingAssets.id))
 					.where(
 						and(
 							eq(trainingAssets.persona, request.persona!.id),
@@ -391,7 +397,7 @@ export default function (
 
 	fastify.post<{
 		Params: { slug: string };
-		Body: { url: string; vimeo_id: string };
+		Body: { url: string; vimeo_id: string; vimeo_account: string };
 	}>(
 		"/assets/vimeo",
 		{
@@ -423,6 +429,18 @@ export default function (
 					throw new Error("Vimeo account not found");
 				}
 
+				const { data } = await axios.get(
+					`https://api.vimeo.com/videos/${request.body.vimeo_id}`,
+					{
+						headers: {
+							Authorization: `Bearer ${account.token}`,
+						},
+						params: {
+							fields: "name",
+						},
+					},
+				);
+
 				const asset = await trx
 					.insert(trainingAssets)
 					.values({
@@ -439,6 +457,7 @@ export default function (
 					asset: asset.id,
 					vimeoId: request.body.vimeo_id,
 					vimeoAccount: account.id,
+					title: data.data.name,
 				});
 
 				await IngestVideoFile.trigger({
