@@ -23,6 +23,10 @@ export const hotmartCourseLessonCount = pgView(
 			hotmartCourseModules,
 			eq(hotmartCourseModules.id, hotmartCourseLessons.module),
 		)
+		.leftJoin(
+			hotmartVideoAssets,
+			eq(hotmartVideoAssets.lesson, hotmartCourseLessons.id),
+		)
 		.leftJoin(trainingAssets, eq(hotmartVideoAssets.asset, trainingAssets.id))
 		.where(isNull(trainingAssets.deletedAt))
 		.groupBy(hotmartCourseModules.course),
