@@ -135,7 +135,10 @@ export const hotmartVideoAssets = pgTable(
 	},
 	(table) => ({
 		hotmartVideoAssetsAssetIdx: index().on(table.asset),
-		hotmartVideoAssetsLessonIdx: uniqueIndex().on(table.lesson),
+		hotmartVideoAssetsLessonIdx: uniqueIndex().on(
+			table.lesson,
+			table.hotmartId,
+		),
 	}),
 );
 

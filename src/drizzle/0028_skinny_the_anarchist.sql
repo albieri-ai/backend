@@ -35,7 +35,7 @@ CREATE INDEX "rss_feed_assets_feed_index" ON "rss_feed_assets" USING btree ("fee
 CREATE INDEX "rss_feed_assets_asset_index" ON "rss_feed_assets" USING btree ("asset");--> statement-breakpoint
 CREATE UNIQUE INDEX "file_assets_file_id_index" ON "file_assets" USING btree ("file_id");--> statement-breakpoint
 CREATE INDEX "hotmart_video_assets_asset_index" ON "hotmart_video_assets" USING btree ("asset");--> statement-breakpoint
-CREATE UNIQUE INDEX "hotmart_video_assets_lesson_index" ON "hotmart_video_assets" USING btree ("lesson");--> statement-breakpoint
+CREATE UNIQUE INDEX "hotmart_video_assets_lesson_hotmart_id_index" ON "hotmart_video_assets" USING btree ("lesson","hotmart_id");--> statement-breakpoint
 CREATE INDEX "training_assets_persona_enabled_index" ON "training_assets" USING btree ("persona","enabled") WHERE "training_assets"."deleted_at" is null;--> statement-breakpoint
 CREATE VIEW "public"."rss_feed_asset_count" AS (select "rss_feeds"."id", count("rss_feed_assets"."id") as "count" from "rss_feed_assets" left join "rss_feeds" on "rss_feeds"."id" = "rss_feed_assets"."feed" left join "training_assets" on "training_assets"."id" = "rss_feed_assets"."asset" where "training_assets"."deleted_at" is null group by "rss_feeds"."id");--> statement-breakpoint
 CREATE VIEW "public"."hotmart_course_lesson_count" AS (select "hotmart_course_modules"."course", count("hotmart_course_lessons"."id") as "count" from "hotmart_course_lessons" left join "hotmart_course_modules" on "hotmart_course_modules"."id" = "hotmart_course_lessons"."module" left join "training_assets" on "hotmart_video_assets"."asset" = "training_assets"."id" where "training_assets"."deleted_at" is null group by "hotmart_course_modules"."course");--> statement-breakpoint
