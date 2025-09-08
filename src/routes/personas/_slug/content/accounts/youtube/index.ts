@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyServerOptions } from "fastify";
 import {
 	trainingAssets,
+	youtubeChannelsVideoCount,
 	youtubeVideoAssets,
 } from "../../../../../../database/schema";
 import { personas } from "../../../../../../database/schema";
@@ -8,7 +9,6 @@ import { and, isNull, eq, sql, inArray, getTableColumns } from "drizzle-orm";
 import { z } from "zod";
 import {
 	youtubeChannels,
-	youtubeChannelsVideoCount,
 	youtubeChannelsVideos,
 } from "../../../../../../database/schema/youtube";
 import {

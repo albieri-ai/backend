@@ -11,7 +11,7 @@ export default defineConfig({
   maxDuration: 3600,
   build: {
 		extensions: [ffmpeg()],
-		external: ["fluent-ffmpeg", "pdf-parse", "pg"],
+		external: ["fluent-ffmpeg", "pdf-parse", "pg", "rss-parser"],
 	},
   retries: {
     enabledInDev: true,
