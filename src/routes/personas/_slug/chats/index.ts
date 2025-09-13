@@ -6,6 +6,7 @@ import {
 	tool,
 	embed,
 	type UIMessage,
+	stepCountIs,
 } from "ai";
 import { threads } from "../../../../database/schema";
 import { eq, and, sql, isNull, count, ilike } from "drizzle-orm";
@@ -258,7 +259,7 @@ export default function (
 			);
 
 			const result = streamText({
-				model: model,
+				model,
 				messages: convertToModelMessages(request.body.messages),
 				system: `
           # Identidade
@@ -414,7 +415,7 @@ export default function (
 							);
 
 							if (!context.length) {
-								return null;
+								return `Nenhum conteúdo foi encontrado para: ${query}`;
 							}
 
 							return context
@@ -467,7 +468,7 @@ export default function (
 							----------
 							`,
 												)
-										: null,
+										: `Nenhum conteúdo foi encontrado para: ${query}`,
 								);
 						},
 					}),
@@ -502,7 +503,7 @@ export default function (
 							----------
 							`,
 												)
-										: null,
+										: `Nenhum conteúdo foi encontrado para: ${query}`,
 								);
 						},
 					}),
@@ -540,7 +541,7 @@ export default function (
 								----------
 								`,
 												)
-										: null,
+										: `Nenhum conteúdo foi encontrado para: ${query}`,
 								);
 						},
 					}),
@@ -579,11 +580,12 @@ export default function (
 									----------
 									`,
 												)
-										: null,
+										: `Nenhum conteúdo foi encontrado para: ${query}`,
 								);
 						},
 					}),
 				},
+				stopWhen: stepCountIs(20),
 			});
 
 			reply.header("X-Vercel-AI-Data-Stream", "v1");
