@@ -22,6 +22,7 @@ import { gptOss120, openai, embed } from "./common";
 export const IngestYoutubeVideo = task({
 	id: "ingest-youtube-video",
 	run: async (payload: { url: string; assetID: string }, { ctx }) => {
+		logger.info(`database url: ${process.env.DATABASE_URL}`);
 		const { db } = await createDb({
 			connectionString: process.env.DATABASE_URL!,
 		});
