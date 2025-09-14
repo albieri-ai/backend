@@ -159,23 +159,24 @@ export default function (
 					firstMessage: userStatistics.firstMessage,
 					threadCount: userStatistics.threadCount,
 				})
-				.from(users)
-				.leftJoin(personaMembers, eq(personaMembers.author, users.id))
+				.from(personaMembers)
 				.leftJoin(
 					userStatistics,
 					and(
-						eq(userStatistics.author, users.id),
+						eq(userStatistics.author, personaMembers.author),
 						eq(userStatistics.persona, personaMembers.persona),
 					),
 				)
-				.where(isNotNull(personaMembers.author))
+				.leftJoin(users, eq(personaMembers.author, users.id))
+				.where(
+					and(
+						isNotNull(userStatistics.author),
+						isNotNull(personaMembers.author),
+					),
+				)
 				.limit(request.query.limit)
 				.offset((request.query.page - 1) * request.query.limit)
-				.orderBy(...order)
-				.catch((err) => {
-					console.error(err);
-					throw err;
-				});
+				.orderBy(...order);
 
 			const userCount = await fastify.db
 				.with(personaMembers)

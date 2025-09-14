@@ -7,7 +7,10 @@ const posthogPlugin: FastifyPluginAsync<{}> = async (
 ) => {
 	const phClient = new PostHog(
 		"phc_YbJS5RdDYAH54LF6Rig4Cc4DOb9wITZgN6pmf2l69R1",
-		{ host: "https://us.i.posthog.com" },
+		{
+			host: "https://us.i.posthog.com",
+			disabled: fastify.config.APP_ENV !== "production",
+		},
 	);
 
 	fastify.addHook("onClose", async () => {

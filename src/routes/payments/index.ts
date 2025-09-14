@@ -135,16 +135,16 @@ export default function (
 		const env = fastify.config.APP_ENV;
 		const baseSubscriptionPriceId =
 			env === "production"
-				? "price_1RsOvDIm8TXXTMNzlkG0ysKa"
-				: "price_1RwmPLI8ev3lBpW6N0ewKn1G";
+				? "price_1S752EIXzF0eOiKFZH5YH3SQ"
+				: "price_1S74paIbAFGq3bR6IeBiua05";
 		const messagesPackagePriceId =
 			env === "production"
-				? "price_1Rwm6gIm8TXXTMNzB8yKa71l"
-				: "price_1RwmRQI8ev3lBpW6zwRgYPzg";
+				? "price_1S756zIXzF0eOiKF9HwYROSP"
+				: "price_1S750PIbAFGq3bR6bmro2wRz";
 		const wordsPackagePriceId =
 			env === "production"
-				? "price_1RwmCnIm8TXXTMNzL291RFkL"
-				: "price_1RwmRkI8ev3lBpW60EMaug3I";
+				? "price_1S756VIXzF0eOiKFJNs394SB"
+				: "price_1S74zrIbAFGq3bR6TSzlAcKn";
 
 		const { data } = await fastify.stripe.customers.list({
 			email: request.user!.email,

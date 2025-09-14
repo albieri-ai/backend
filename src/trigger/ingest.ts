@@ -3,7 +3,7 @@ import { createDb } from "../database/db";
 import { YoutubeLoader } from "@langchain/community/document_loaders/web/youtube";
 import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
-import { embed, embedMany, generateObject } from "ai";
+import { embedMany, generateObject } from "ai";
 import { assetChunks, assetSummary, trainingAssets } from "../database/schema";
 import axios from "axios";
 import fs from "node:fs";
@@ -17,11 +17,11 @@ import {
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import Groq from "groq-sdk";
 import z from "zod";
-import { gptOss120, openai } from "./common";
+import { gptOss120, openai, embed } from "./common";
 
 export const IngestYoutubeVideo = task({
 	id: "ingest-youtube-video",
-	run: async (payload: { url: string; assetID: string }) => {
+	run: async (payload: { url: string; assetID: string }, { ctx }) => {
 		const loader = YoutubeLoader.createFromUrl(payload.url, {
 			language: "pt-BR",
 			addVideoInfo: true,
@@ -61,9 +61,21 @@ export const IngestYoutubeVideo = task({
 
 		logger.info(`summary generated for ${payload.assetID}`);
 
-		const { embedding: summaryEmbedding } = await embed({
-			model: openai.embedding("text-embedding-3-small"),
-			value: summary,
+		const { db } = await createDb({
+			connectionString: process.env.DATABASE_URL!,
+		});
+
+		const asset = await db.query.trainingAssets.findFirst({
+			columns: { persona: true },
+			where: (ta, { eq }) => eq(ta.id, payload.assetID),
+		});
+
+		const { embedding: summaryEmbedding } = await embed(summary, {
+			traceId: ctx.task.id,
+			distinctId: `embed_yt_video_${payload.assetID}`,
+			spanId: `embed_yt_video_${payload.assetID}`,
+			spanName: "index_yt_video",
+			persona: asset!.persona!,
 		});
 
 		const { embeddings } = await embedMany({
@@ -72,10 +84,6 @@ export const IngestYoutubeVideo = task({
 		});
 
 		logger.info(`embeddings generated for ${payload.assetID}`);
-
-		const { db } = await createDb({
-			connectionString: process.env.DATABASE_URL!,
-		});
 
 		await db.transaction(async (trx) => {
 			await trx.update(trainingAssets).set({
@@ -111,7 +119,7 @@ export const IngestYoutubeVideo = task({
 
 export const IngestPdfDocument = task({
 	id: "ingest-pdf-document",
-	run: async (payload: { url: string; assetID: string }) => {
+	run: async (payload: { url: string; assetID: string }, { ctx }) => {
 		const { data: blob } = await axios.get(payload.url, {
 			responseType: "arraybuffer",
 		});
@@ -157,9 +165,21 @@ export const IngestPdfDocument = task({
 			}),
 		});
 
-		const { embedding: summaryEmbedding } = await embed({
-			model: openai.embedding("text-embedding-3-small"),
-			value: summary,
+		const { db } = await createDb({
+			connectionString: process.env.DATABASE_URL!,
+		});
+
+		const asset = await db.query.trainingAssets.findFirst({
+			columns: { persona: true },
+			where: (ta, { eq }) => eq(ta.id, payload.assetID),
+		});
+
+		const { embedding: summaryEmbedding } = await embed(summary, {
+			traceId: ctx.task.id,
+			distinctId: `embed_pdf_document_${payload.assetID}`,
+			spanId: `embed_pdf_document_${payload.assetID}`,
+			spanName: "index_pdf_document",
+			persona: asset!.persona!,
 		});
 
 		const { embeddings } = await embedMany({
@@ -168,10 +188,6 @@ export const IngestPdfDocument = task({
 		});
 
 		logger.info(`embeddings generated for ${payload.assetID}`);
-
-		const { db } = await createDb({
-			connectionString: process.env.DATABASE_URL!,
-		});
 
 		await db.transaction(async (trx) => {
 			await trx.update(trainingAssets).set({
@@ -203,7 +219,7 @@ export const IngestPdfDocument = task({
 
 export const IngestAudioFile = task({
 	id: "ingest-audio-file",
-	run: async (payload: { assetID: string; url: string }) => {
+	run: async (payload: { assetID: string; url: string }, { ctx }) => {
 		const groqSdk = new Groq({
 			apiKey: process.env.GROQ_API_KEY,
 		});
@@ -251,9 +267,21 @@ export const IngestAudioFile = task({
 			}),
 		});
 
-		const { embedding: summaryEmbedding } = await embed({
-			model: openai.embedding("text-embedding-3-small"),
-			value: summary,
+		const { db } = await createDb({
+			connectionString: process.env.DATABASE_URL!,
+		});
+
+		const asset = await db.query.trainingAssets.findFirst({
+			columns: { persona: true },
+			where: (ta, { eq }) => eq(ta.id, payload.assetID),
+		});
+
+		const { embedding: summaryEmbedding } = await embed(summary, {
+			traceId: ctx.task.id,
+			distinctId: `embed_audio_file_${payload.assetID}`,
+			spanId: `embed_audio_file_${payload.assetID}`,
+			spanName: "index_audio_file",
+			persona: asset!.persona!,
 		});
 
 		const textSplitter = new RecursiveCharacterTextSplitter({
@@ -268,10 +296,6 @@ export const IngestAudioFile = task({
 		});
 
 		logger.info(`embeddings generated for ${payload.assetID}`);
-
-		const { db } = await createDb({
-			connectionString: process.env.DATABASE_URL!,
-		});
 
 		await db.transaction(async (trx) => {
 			await trx.update(trainingAssets).set({
@@ -309,7 +333,7 @@ export const IngestAudioFile = task({
 
 export const IngestVideoFile = task({
 	id: "ingest-video-file",
-	run: async (payload: { url: string; assetID: string }) => {
+	run: async (payload: { url: string; assetID: string }, { ctx }) => {
 		const fileName = `${createId()}.mp3`;
 		const outputPath = `/tmp/${fileName}`;
 

@@ -15,9 +15,9 @@ import {
 } from "../database/schema";
 import { and, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { IngestVideoFile } from "./ingest";
-import { embed, generateObject } from "ai";
+import { generateObject } from "ai";
 import z from "zod";
-import { gptOss120, openai } from "./common";
+import { gptOss120, embed } from "./common";
 
 export const HotmartCourseImport = task({
 	id: "hotmart-course-import",
@@ -405,7 +405,7 @@ export const HotmartCourseImport = task({
 
 export const HotmartModuleSummarize = task({
 	id: "hotmart-course-module-summarize",
-	run: async (payload: { id: string }) => {
+	run: async (payload: { id: string }, { ctx }) => {
 		const { db } = await createDb({
 			connectionString: process.env.DATABASE_URL!,
 		});
@@ -463,9 +463,12 @@ export const HotmartModuleSummarize = task({
 			}),
 		});
 
-		const { embedding: embeddings } = await embed({
-			model: openai.embedding("text-embedding-3-small"),
-			value: summary,
+		const { embedding: embeddings } = await embed(summary, {
+			traceId: ctx.task.id,
+			distinctId: `embed_ht_module_${payload.id}`,
+			spanId: `embed_ht_module_${payload.id}`,
+			spanName: "index_hotmart_module",
+			persona: lessonsSummary[0].persona!,
 		});
 
 		await db
@@ -487,7 +490,7 @@ export const HotmartModuleSummarize = task({
 
 export const HotmartCourseSummarize = task({
 	id: "hotmart-course-summarize",
-	run: async (payload: { id: string }) => {
+	run: async (payload: { id: string }, { ctx }) => {
 		const { db } = await createDb({
 			connectionString: process.env.DATABASE_URL!,
 		});
@@ -496,11 +499,16 @@ export const HotmartCourseSummarize = task({
 			.select({
 				title: hotmartCourseModules.name,
 				summary: hotmartCourseModulesSummary.summary,
+				persona: hotmartCourses.persona,
 			})
 			.from(hotmartCourseModulesSummary)
 			.leftJoin(
 				hotmartCourseModules,
 				eq(hotmartCourseModules.id, hotmartCourseModulesSummary.module),
+			)
+			.leftJoin(
+				hotmartCourses,
+				eq(hotmartCourses.id, hotmartCourseModules.course),
 			)
 			.where(eq(hotmartCourseModules.course, payload.id));
 
@@ -539,9 +547,12 @@ export const HotmartCourseSummarize = task({
 			}),
 		});
 
-		const { embedding: embeddings } = await embed({
-			model: openai.embedding("text-embedding-3-small"),
-			value: summary,
+		const { embedding: embeddings } = await embed(summary, {
+			traceId: ctx.task.id,
+			distinctId: `embed_ht_course_${payload.id}`,
+			spanId: `embed_ht_course_${payload.id}`,
+			spanName: "index_hotmart_course",
+			persona: modulesSummary[0].persona!,
 		});
 
 		await db
