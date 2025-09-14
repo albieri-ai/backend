@@ -70,6 +70,12 @@ export const IngestYoutubeVideo = task({
 			where: (ta, { eq }) => eq(ta.id, payload.assetID),
 		});
 
+		if (!asset) {
+			logger.error(`not asset found for id: ${payload.assetID}`);
+
+			throw new Error(`not asset found for id: ${payload.assetID}`);
+		}
+
 		const { embedding: summaryEmbedding } = await embed(summary, {
 			traceId: ctx.task.id,
 			distinctId: `embed_yt_video_${payload.assetID}`,
