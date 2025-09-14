@@ -22,6 +22,21 @@ import { gptOss120, openai, embed } from "./common";
 export const IngestYoutubeVideo = task({
 	id: "ingest-youtube-video",
 	run: async (payload: { url: string; assetID: string }, { ctx }) => {
+		const { db } = await createDb({
+			connectionString: process.env.DATABASE_URL!,
+		});
+
+		const asset = await db.query.trainingAssets.findFirst({
+			columns: { persona: true },
+			where: (ta, { eq }) => eq(ta.id, payload.assetID),
+		});
+
+		if (!asset) {
+			logger.error(`not asset found for id: ${payload.assetID}`);
+
+			throw new Error(`not asset found for id: ${payload.assetID}`);
+		}
+
 		const loader = YoutubeLoader.createFromUrl(payload.url, {
 			language: "pt-BR",
 			addVideoInfo: true,
@@ -60,21 +75,6 @@ export const IngestYoutubeVideo = task({
 		});
 
 		logger.info(`summary generated for ${payload.assetID}`);
-
-		const { db } = await createDb({
-			connectionString: process.env.DATABASE_URL!,
-		});
-
-		const asset = await db.query.trainingAssets.findFirst({
-			columns: { persona: true },
-			where: (ta, { eq }) => eq(ta.id, payload.assetID),
-		});
-
-		if (!asset) {
-			logger.error(`not asset found for id: ${payload.assetID}`);
-
-			throw new Error(`not asset found for id: ${payload.assetID}`);
-		}
 
 		const { embedding: summaryEmbedding } = await embed(summary, {
 			traceId: ctx.task.id,
@@ -126,6 +126,21 @@ export const IngestYoutubeVideo = task({
 export const IngestPdfDocument = task({
 	id: "ingest-pdf-document",
 	run: async (payload: { url: string; assetID: string }, { ctx }) => {
+		const { db } = await createDb({
+			connectionString: process.env.DATABASE_URL!,
+		});
+
+		const asset = await db.query.trainingAssets.findFirst({
+			columns: { persona: true },
+			where: (ta, { eq }) => eq(ta.id, payload.assetID),
+		});
+
+		if (!asset) {
+			logger.error(`not asset found for id: ${payload.assetID}`);
+
+			throw new Error(`not asset found for id: ${payload.assetID}`);
+		}
+
 		const { data: blob } = await axios.get(payload.url, {
 			responseType: "arraybuffer",
 		});
@@ -169,15 +184,6 @@ export const IngestPdfDocument = task({
 				summary: z.string(),
 				tags: z.array(z.string()),
 			}),
-		});
-
-		const { db } = await createDb({
-			connectionString: process.env.DATABASE_URL!,
-		});
-
-		const asset = await db.query.trainingAssets.findFirst({
-			columns: { persona: true },
-			where: (ta, { eq }) => eq(ta.id, payload.assetID),
 		});
 
 		const { embedding: summaryEmbedding } = await embed(summary, {
@@ -226,6 +232,21 @@ export const IngestPdfDocument = task({
 export const IngestAudioFile = task({
 	id: "ingest-audio-file",
 	run: async (payload: { assetID: string; url: string }, { ctx }) => {
+		const { db } = await createDb({
+			connectionString: process.env.DATABASE_URL!,
+		});
+
+		const asset = await db.query.trainingAssets.findFirst({
+			columns: { persona: true },
+			where: (ta, { eq }) => eq(ta.id, payload.assetID),
+		});
+
+		if (!asset) {
+			logger.error(`not asset found for id: ${payload.assetID}`);
+
+			throw new Error(`not asset found for id: ${payload.assetID}`);
+		}
+
 		const groqSdk = new Groq({
 			apiKey: process.env.GROQ_API_KEY,
 		});
@@ -271,15 +292,6 @@ export const IngestAudioFile = task({
 				summary: z.string(),
 				// tags: z.array(z.string()),
 			}),
-		});
-
-		const { db } = await createDb({
-			connectionString: process.env.DATABASE_URL!,
-		});
-
-		const asset = await db.query.trainingAssets.findFirst({
-			columns: { persona: true },
-			where: (ta, { eq }) => eq(ta.id, payload.assetID),
 		});
 
 		const { embedding: summaryEmbedding } = await embed(summary, {
