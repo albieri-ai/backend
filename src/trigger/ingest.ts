@@ -22,10 +22,20 @@ import { gptOss120, openai, embed } from "./common";
 export const IngestYoutubeVideo = task({
 	id: "ingest-youtube-video",
 	run: async (payload: { url: string; assetID: string }, { ctx }) => {
-		logger.info(`database url: ${process.env.DATABASE_URL}`);
 		const { db } = await createDb({
 			connectionString: process.env.DATABASE_URL!,
 		});
+
+		logger.log(
+			`query: ${
+				db.query.trainingAssets
+					.findFirst({
+						columns: { persona: true },
+						where: (ta, { eq }) => eq(ta.id, payload.assetID),
+					})
+					.toSQL().sql
+			}`,
+		);
 
 		const asset = await db.query.trainingAssets.findFirst({
 			columns: { persona: true },
