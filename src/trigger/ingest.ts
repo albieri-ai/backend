@@ -26,19 +26,7 @@ export const IngestYoutubeVideo = task({
 			connectionString: process.env.DATABASE_URL!,
 		});
 
-		logger.log(
-			`query: ${
-				db.query.trainingAssets
-					.findFirst({
-						columns: { persona: true },
-						where: (ta, { eq }) => eq(ta.id, payload.assetID),
-					})
-					.toSQL().sql
-			}`,
-		);
-
 		const asset = await db.query.trainingAssets.findFirst({
-			columns: { persona: true },
 			where: (ta, { eq }) => eq(ta.id, payload.assetID),
 		});
 
