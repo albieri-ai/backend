@@ -15,6 +15,7 @@ import {
 	S3Client,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { eq } from "drizzle-orm";
 import Groq from "groq-sdk";
 import z from "zod";
 import { gptOss120, openai, embed } from "./common";
@@ -26,9 +27,12 @@ export const IngestYoutubeVideo = task({
 			connectionString: process.env.DATABASE_URL!,
 		});
 
-		const asset = await db.query.trainingAssets.findFirst({
-			where: (ta, { eq }) => eq(ta.id, payload.assetID),
-		});
+		const asset = await db
+			.select({ persona: trainingAssets.persona })
+			.from(trainingAssets)
+			.where(eq(trainingAssets.id, payload.assetID))
+			.limit(1)
+			.then(([res]) => res);
 
 		if (!asset) {
 			logger.error(`not asset found for id: ${payload.assetID}`);
