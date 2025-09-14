@@ -294,7 +294,7 @@ export default function (
 				});
 			}
 
-			reply.code(204).send();
+			reply.code(204).send({ data: asset });
 		},
 	);
 
@@ -391,7 +391,7 @@ export default function (
 				url: asset.url,
 			});
 
-			reply.code(204).send();
+			reply.code(204).send({ data: asset });
 		},
 	);
 
@@ -414,7 +414,7 @@ export default function (
 			preHandler: [adminOnly(fastify)],
 		},
 		async (request, reply) => {
-			await fastify.db.transaction(async (trx) => {
+			const asset = await fastify.db.transaction(async (trx) => {
 				const [account] = await trx
 					.select()
 					.from(vimeoAccounts)
@@ -466,7 +466,7 @@ export default function (
 				});
 			});
 
-			reply.code(204).send();
+			reply.code(204).send({ data: asset });
 		},
 	);
 }
