@@ -64,7 +64,7 @@ const authPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 					html: await render(
 						<PasswordResetTemplate
 							userFirstName={user.name}
-							resetLink={`${fastify.config.APP_URL}/auth/recuperar-senha?token=${token}`}
+							resetLink={`${fastify.config.APP_URL}/auth/redefinir-senha?token=${token}`}
 						/>,
 					),
 				});
