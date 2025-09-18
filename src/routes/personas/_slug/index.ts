@@ -52,6 +52,12 @@ export default function (
 						},
 					},
 				},
+				attributes: {
+					columns: {
+						attribute: true,
+						value: true,
+					},
+				},
 			},
 			where: (personas) =>
 				and(eq(personas.slug, slug), isNull(personas.deletedAt)),

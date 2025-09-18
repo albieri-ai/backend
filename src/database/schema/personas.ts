@@ -105,6 +105,7 @@ export const personaRelations = relations(personas, ({ one, many }) => ({
 		references: [organizations.id],
 	}),
 	topics: many(personaTopics),
+	attributes: many(personaProfileAttributes),
 }));
 
 export const personaTopicsRelations = relations(personaTopics, ({ one }) => ({
@@ -117,3 +118,13 @@ export const personaTopicsRelations = relations(personaTopics, ({ one }) => ({
 		references: [topics.id],
 	}),
 }));
+
+export const personaProfileAttributesRelations = relations(
+	personaProfileAttributes,
+	({ one }) => ({
+		persona: one(personas, {
+			fields: [personaProfileAttributes.persona],
+			references: [personas.id],
+		}),
+	}),
+);
