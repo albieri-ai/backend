@@ -1,12 +1,13 @@
 import type { FastifyInstance, FastifyServerOptions } from "fastify";
 import {
 	organizations,
+	personaProfileAttributes,
 	personas,
 	personaTopics,
 	topics,
 } from "../../../database/schema";
 import { z } from "zod";
-import { and, isNull, eq, notInArray } from "drizzle-orm";
+import { and, isNull, eq, notInArray, sql } from "drizzle-orm";
 import { PersonaCreateSchema } from "../index";
 import { adminOnly } from "../../../lib/adminOnly";
 
@@ -103,12 +104,52 @@ export default function (
 			preHandler: [adminOnly(fastify)],
 		},
 		async (request, reply) => {
+			const { attributes, ...body } = request.body;
+
 			await fastify.db.transaction(async (trx) => {
-				await trx
+				const { id } = await trx
 					.update(personas)
-					.set(request.body)
+					.set(body)
 					.where(eq(personas.slug, request.params.slug))
-					.returning();
+					.returning()
+					.then(([res]) => res);
+
+				if (attributes) {
+					if (attributes.length) {
+						await trx.delete(personaProfileAttributes).where(
+							and(
+								eq(personaProfileAttributes.persona, id),
+								notInArray(
+									personaProfileAttributes.attribute,
+									attributes.map((att) => att.attribute),
+								),
+							),
+						);
+
+						await trx
+							.insert(personaProfileAttributes)
+							.values(
+								attributes.map((att) => ({
+									persona: id,
+									attribute: att.attribute,
+									value: att.value,
+								})),
+							)
+							.onConflictDoUpdate({
+								target: [
+									personaProfileAttributes.persona,
+									personaProfileAttributes.attribute,
+								],
+								set: {
+									value: sql`EXCLUDED.value`,
+								},
+							});
+					} else {
+						await trx
+							.delete(personaProfileAttributes)
+							.where(eq(personaProfileAttributes.persona, id));
+					}
+				}
 
 				if (request.body.name || request.body.slug) {
 					await trx

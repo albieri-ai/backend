@@ -75,6 +75,26 @@ export const personaTopics = pgTable(
 	}),
 );
 
+export const personaProfileAttributes = pgTable(
+	"persona_attributes",
+	{
+		id: serial().primaryKey(),
+		persona: varchar()
+			.notNull()
+			.references(() => personas.id, { onDelete: "cascade" }),
+		attribute: varchar().notNull(),
+		value: text().notNull(),
+	},
+	(table) => ({
+		personaProfileAttributesPersonaIdx: index().on(table.persona),
+		personaProfileAttributesAttributeIdx: index().on(table.attribute),
+		personaProfileAttributesPersonaAttributeIdx: uniqueIndex().on(
+			table.persona,
+			table.attribute,
+		),
+	}),
+);
+
 export const personaRelations = relations(personas, ({ one, many }) => ({
 	photo: one(files, {
 		fields: [personas.photo],

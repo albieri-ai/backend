@@ -16,6 +16,7 @@ export const PersonaCreateSchema = z.object({
 	title: z.string().min(3).max(64).optional(),
 	description: z.string().optional(),
 	objective: z.string().optional(),
+	attributes: z.array(z.object({ attribute: z.string(), value: z.string() })),
 });
 
 export default function (
