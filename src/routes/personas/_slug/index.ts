@@ -113,18 +113,18 @@ export default function (
 			const { attributes, ...body } = request.body;
 
 			await fastify.db.transaction(async (trx) => {
-				const { id } = await trx
-					.update(personas)
-					.set(body)
-					.where(eq(personas.slug, request.params.slug))
-					.returning()
-					.then(([res]) => res);
+				if (Object.keys(body).length) {
+					await trx
+						.update(personas)
+						.set(body)
+						.where(eq(personas.slug, request.params.slug));
+				}
 
 				if (attributes) {
 					if (attributes.length) {
 						await trx.delete(personaProfileAttributes).where(
 							and(
-								eq(personaProfileAttributes.persona, id),
+								eq(personaProfileAttributes.persona, request.persona!.id),
 								notInArray(
 									personaProfileAttributes.attribute,
 									attributes.map((att) => att.attribute),
@@ -136,7 +136,7 @@ export default function (
 							.insert(personaProfileAttributes)
 							.values(
 								attributes.map((att) => ({
-									persona: id,
+									persona: request.persona!.id,
 									attribute: att.attribute,
 									value: att.value,
 								})),
@@ -153,7 +153,7 @@ export default function (
 					} else {
 						await trx
 							.delete(personaProfileAttributes)
-							.where(eq(personaProfileAttributes.persona, id));
+							.where(eq(personaProfileAttributes.persona, request.persona!.id));
 					}
 				}
 
