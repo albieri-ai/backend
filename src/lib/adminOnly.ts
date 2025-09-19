@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { and, isNull, eq } from "drizzle-orm";
-import { members, personas } from "../database/schema";
+import { members } from "../database/schema";
 
 export function adminOnly(fastify: FastifyInstance) {
 	return async (
@@ -11,12 +11,42 @@ export function adminOnly(fastify: FastifyInstance) {
 			return reply.unauthorized("unauthorized");
 		}
 
-		const [persona] = await fastify.db
-			.select()
-			.from(personas)
-			.where(
+		const persona = await fastify.db.query.personas.findFirst({
+			columns: {
+				photo: false,
+			},
+			with: {
+				photo: {
+					columns: {
+						id: true,
+						name: true,
+						originalName: true,
+						mimeType: true,
+						size: true,
+						checksum: true,
+					},
+				},
+				topics: {
+					columns: {},
+					with: {
+						topic: {
+							columns: {
+								id: true,
+								name: true,
+							},
+						},
+					},
+				},
+				attributes: {
+					columns: {
+						attribute: true,
+						value: true,
+					},
+				},
+			},
+			where: (personas) =>
 				and(eq(personas.slug, request.params.slug), isNull(personas.deletedAt)),
-			);
+		});
 
 		if (!persona) {
 			return reply.callNotFound();

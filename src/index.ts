@@ -235,6 +235,25 @@ declare module "fastify" {
 	interface FastifyRequest {
 		session?: Session;
 		user?: User;
-		persona?: InferSelectModel<typeof personas>;
+		persona?: Omit<InferSelectModel<typeof personas>, "photo"> & {
+			photo: {
+				id: string;
+				name: string;
+				originalName: string;
+				mimeType: string;
+				size: number | null;
+				checksum: string | null;
+			};
+			topics: {
+				topic: {
+					id: number;
+					name: string;
+				};
+			}[];
+			attributes: {
+				attribute: string;
+				value: string;
+			}[];
+		};
 	}
 }
