@@ -99,6 +99,7 @@ export default function (
 					photo: persona.photo,
 					title: persona.title,
 					description: persona.description,
+					slug: persona.slug,
 				},
 			});
 		},
