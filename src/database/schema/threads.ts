@@ -13,7 +13,10 @@ import { desc, relations } from "drizzle-orm";
 import type { UIMessage } from "ai";
 import { createId } from "@paralleldrive/cuid2";
 
-const ThreadVisibility = pgEnum("thread_visibility", ["public", "private"]);
+export const ThreadVisibility = pgEnum("thread_visibility", [
+	"public",
+	"private",
+]);
 
 export const threads = pgTable(
 	"threads",
