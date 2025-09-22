@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyServerOptions } from "fastify";
 import {
+	members,
 	organizations,
 	personaProfileAttributes,
 	personas,
@@ -78,7 +79,7 @@ export default function (
 	};
 
 	fastify.get<{ Params: z.infer<typeof PersonaBySlugSchema> }>(
-		"/",
+		"/summary",
 		{
 			schema: {
 				params: PersonaBySlugSchema,
@@ -89,6 +90,50 @@ export default function (
 
 			if (!persona) {
 				return reply.callNotFound();
+			}
+
+			return reply.send({
+				data: {
+					id: persona.slug,
+					name: persona.name,
+					photo: persona.photo,
+					title: persona.title,
+					description: persona.description,
+				},
+			});
+		},
+	);
+
+	fastify.get<{ Params: z.infer<typeof PersonaBySlugSchema> }>(
+		"/",
+		{
+			schema: {
+				params: PersonaBySlugSchema,
+			},
+		},
+		async (request, reply) => {
+			if (!request.user) {
+				return reply.status(401).send({ error: "Unauthorized" });
+			}
+
+			const persona = await getPersonaBySlug(request.params.slug);
+
+			if (!persona) {
+				return reply.callNotFound();
+			}
+
+			const [member] = await fastify.db
+				.select()
+				.from(members)
+				.where(
+					and(
+						eq(members.organizationId, persona.organization),
+						eq(members.userId, request.user!.id),
+					),
+				);
+
+			if (!member) {
+				return reply.status(403).send({ error: "Forbidden" });
 			}
 
 			return reply.send({

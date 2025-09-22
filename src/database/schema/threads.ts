@@ -5,12 +5,15 @@ import {
 	varchar,
 	timestamp,
 	index,
+	pgEnum,
 } from "drizzle-orm/pg-core";
 import { users } from "./auth";
 import { personas } from "./personas";
 import { desc, relations } from "drizzle-orm";
 import type { UIMessage } from "ai";
 import { createId } from "@paralleldrive/cuid2";
+
+const ThreadVisibility = pgEnum("thread_visibility", ["public", "private"]);
 
 export const threads = pgTable(
 	"threads",
@@ -28,6 +31,7 @@ export const threads = pgTable(
 
 		messages: jsonb().notNull().$type<UIMessage[]>(),
 		model: varchar().notNull(),
+		visibility: ThreadVisibility().notNull().default("private"),
 
 		deletedBy: varchar().references(() => users.id),
 
