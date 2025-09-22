@@ -140,11 +140,11 @@ export default function (
 		const messagesPackagePriceId =
 			env === "production"
 				? "price_1S756zIXzF0eOiKF9HwYROSP"
-				: "price_1S750PIbAFGq3bR6bmro2wRz";
+				: "price_1SADqkIbAFGq3bR66QHZmTw3";
 		const wordsPackagePriceId =
 			env === "production"
 				? "price_1S756VIXzF0eOiKFJNs394SB"
-				: "price_1S74zrIbAFGq3bR6TSzlAcKn";
+				: "price_1SADpaIbAFGq3bR6oGDz9MKN";
 
 		const { data } = await fastify.stripe.customers.list({
 			email: request.user!.email,

@@ -70,13 +70,13 @@ export const TrackSubscriptionUsage = schedules.task({
 
 		const extraWordsItem = stripeSubscription.items.data.find(
 			(d) =>
-				d.price.id === "price_1Rwm6gIm8TXXTMNzB8yKa71l" ||
-				d.price.id === "price_1RwmRQI8ev3lBpW6zwRgYPzg",
+				d.price.id === "price_1S756VIXzF0eOiKFJNs394SB" ||
+				d.price.id === "price_1SADpaIbAFGq3bR6oGDz9MKN",
 		);
 		const extraMessagesItem = stripeSubscription.items.data.find(
 			(d) =>
-				d.price.id === "price_1RwmCnIm8TXXTMNzL291RFkL" ||
-				d.price.id === "price_1RwmRkI8ev3lBpW60EMaug3I",
+				d.price.id === "price_1S756zIXzF0eOiKF9HwYROSP" ||
+				d.price.id === "price_1SADqkIbAFGq3bR66QHZmTw3",
 		);
 
 		const defaultLimits = await db
