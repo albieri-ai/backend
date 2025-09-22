@@ -150,7 +150,7 @@ export default function (
 				);
 
 			const trainingStatus =
-				pendingTrainingAssets.length > 0 ? "pending" : "complete";
+				pendingTrainingAssets.length > 0 ? "pending" : "completed";
 
 			return reply.send({
 				data: {
