@@ -223,7 +223,7 @@ export default function (
 			);
 
 			const conversationModel = withTracing(
-				fastify.ai.providers.openai("gpt-5-mini"),
+				fastify.ai.providers.gemini("gemini-2.5-flash"),
 				fastify.posthog,
 				{
 					posthogDistinctId: request.user?.id,
