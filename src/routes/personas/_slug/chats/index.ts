@@ -129,10 +129,6 @@ export default function (
 			},
 		},
 		async (request, reply) => {
-			if (!request.user?.id) {
-				return reply.forbidden();
-			}
-
 			const thread = await fastify.db.query.threads.findFirst({
 				columns: {
 					author: false,
@@ -166,9 +162,20 @@ export default function (
 					),
 			});
 
-			return reply.send({
-				data: thread,
-			});
+			if (!thread) {
+				return reply.send({ data: null });
+			}
+
+			if (
+				thread?.visibility === "public" ||
+				thread.author.id === request.user?.id
+			) {
+				return reply.send({
+					data: thread,
+				});
+			}
+
+			return reply.status(403).send({ error: "Forbidden" });
 		},
 	);
 
