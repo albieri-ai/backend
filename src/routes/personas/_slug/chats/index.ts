@@ -222,6 +222,17 @@ export default function (
 				},
 			);
 
+			const conversationModel = withTracing(
+				fastify.ai.providers.openai("gpt-5-mini"),
+				fastify.posthog,
+				{
+					posthogDistinctId: request.user?.id,
+					posthogProperties: { chat_id: chat?.id },
+					posthogPrivacyMode: false,
+					posthogGroups: { persona: request.persona!.id },
+				},
+			);
+
 			if (!chat) {
 				const { text: title } = await generateText({
 					model: gptOss,
@@ -237,29 +248,32 @@ export default function (
 					),
 				});
 
-				await fastify.db.insert(threads).values({
-					id: request.params.chatID,
-					persona: request.persona!.id,
-					title,
-					author: request.user.id,
-					messages: request.body.messages,
-					model: "gemini-2.5-pro",
+				const [thread] = await fastify.db
+					.insert(threads)
+					.values({
+						id: request.params.chatID,
+						persona: request.persona!.id,
+						title,
+						author: request.user.id,
+						messages: request.body.messages,
+						model: "gemini-2.5-pro",
+					})
+					.returning({ id: threads.id });
+
+				fastify.posthog.capture({
+					event: "thread created",
+					distinctId: request.user.id,
+					properties: {
+						organization: persona.organization,
+						persona: persona.id,
+						thread: thread.id,
+						model: conversationModel.modelId,
+					},
 				});
 			}
 
-			const model = withTracing(
-				fastify.ai.providers.openai("gpt-5-mini"),
-				fastify.posthog,
-				{
-					posthogDistinctId: request.user?.id,
-					posthogProperties: { chat_id: chat?.id },
-					posthogPrivacyMode: false,
-					posthogGroups: { persona: request.persona!.id },
-				},
-			);
-
 			const result = streamText({
-				model,
+				model: conversationModel,
 				messages: convertToModelMessages(request.body.messages),
 				system: buildSystemPrompt({ persona: request.persona! }),
 				tools: {
