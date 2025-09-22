@@ -6,9 +6,10 @@ import {
 	personas,
 	personaTopics,
 	topics,
+	trainingAssets,
 } from "../../../database/schema";
 import { z } from "zod";
-import { and, isNull, eq, notInArray, sql } from "drizzle-orm";
+import { and, isNull, eq, notInArray, sql, count } from "drizzle-orm";
 import { PersonaCreateSchema } from "../index";
 import { adminOnly } from "../../../lib/adminOnly";
 
@@ -137,8 +138,25 @@ export default function (
 				return reply.status(403).send({ error: "Forbidden" });
 			}
 
+			const pendingTrainingAssets = await fastify.db
+				.select({ count: count() })
+				.from(trainingAssets)
+				.where(
+					and(
+						eq(trainingAssets.persona, persona.id),
+						eq(trainingAssets.status, "pending"),
+						isNull(trainingAssets.deletedAt),
+					),
+				);
+
+			const trainingStatus =
+				pendingTrainingAssets.length > 0 ? "pending" : "complete";
+
 			return reply.send({
-				data: persona,
+				data: {
+					...persona,
+					trainingStatus,
+				},
 			});
 		},
 	);
