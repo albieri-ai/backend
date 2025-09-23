@@ -218,6 +218,20 @@
       "when": 1758583287513,
       "tag": "0030_medical_harpoon",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1758641881563,
+      "tag": "0031_mute_slayback",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1758652730998,
+      "tag": "0032_careless_human_robot",
+      "breakpoints": true
     }
   ]
 }

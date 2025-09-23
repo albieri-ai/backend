@@ -8,7 +8,7 @@ import {
 	type UIMessage,
 	stepCountIs,
 } from "ai";
-import { threads } from "../../../../database/schema";
+import { threads, threadShareIds } from "../../../../database/schema";
 import { eq, and, sql, isNull, count, ilike } from "drizzle-orm";
 import { personaLoader } from "../../../../lib/personaLoader";
 import { z } from "zod";
@@ -152,6 +152,12 @@ export default function (
 							slug: true,
 						},
 					},
+					shareIds: {
+						columns: {
+							id: true,
+						},
+						where: (si, { isNull }) => isNull(si.disabledAt),
+					},
 				},
 				where: () =>
 					and(
@@ -166,16 +172,191 @@ export default function (
 				return reply.send({ data: null });
 			}
 
+			const { shareIds, ...threadData } = thread;
+
 			if (
 				thread?.visibility === "public" ||
 				thread.author.id === request.user?.id
 			) {
+				const activeShareId =
+					thread?.visibility === "public" && shareIds.length > 0
+						? shareIds[0].id
+						: null;
+
 				return reply.send({
-					data: thread,
+					data: {
+						...threadData,
+						shareUrl: `${fastify.config.APP_URL}/u/${thread.persona.slug}/shared/${activeShareId}`,
+					},
 				});
 			}
 
 			return reply.status(403).send({ error: "Forbidden" });
+		},
+	);
+
+	fastify.post<{ Params: { slug: string; chatID: string } }>(
+		"/:chatID/share",
+		{
+			preHandler: [personaLoader(fastify)],
+			schema: {
+				params: z.object({
+					slug: z.string(),
+					chatID: z.string(),
+				}),
+			},
+		},
+		async (request, reply) => {
+			const { id } = await fastify.db.transaction(async (trx) => {
+				const [thread] = await trx
+					.update(threads)
+					.set({ visibility: "public" })
+					.where(eq(threads.id, request.params.chatID))
+					.returning({ id: threads.id, messages: threads.messages });
+
+				if (!thread) {
+					reply.callNotFound();
+
+					throw new Error("thread not found");
+				}
+
+				const lastMessage = thread.messages[thread.messages.length - 1];
+
+				if (!lastMessage) {
+					throw new Error("empty thread cannot be shared");
+				}
+
+				const lastMessageId = lastMessage.id;
+
+				const [shareId] = await trx
+					.insert(threadShareIds)
+					.values({
+						thread: thread.id,
+						lastMessage: lastMessageId,
+					})
+					.onConflictDoUpdate({
+						target: [threadShareIds.id],
+						set: {
+							lastMessage: lastMessageId,
+						},
+					})
+					.returning();
+
+				if (!shareId) {
+					throw new Error("unable to share conversation");
+				}
+
+				return shareId;
+			});
+
+			return reply.send({
+				data: {
+					url: `${fastify.config.APP_URL}/u/${request.persona!.slug}/shared/${id}`,
+				},
+			});
+		},
+	);
+
+	fastify.post<{ Params: { slug: string; chatID: string } }>(
+		"/:chatID/unshare",
+		{
+			preHandler: [personaLoader(fastify)],
+			schema: {
+				params: z.object({
+					slug: z.string(),
+					chatID: z.string(),
+				}),
+			},
+		},
+		async (request, reply) => {
+			console.log("aqui");
+			await fastify.db.transaction(async (trx) => {
+				const [thread] = await trx
+					.update(threads)
+					.set({ visibility: "private" })
+					.where(eq(threads.id, request.params.chatID))
+					.returning({ id: threads.id });
+
+				if (!thread) {
+					return reply.callNotFound();
+				}
+
+				await trx
+					.update(threadShareIds)
+					.set({ disabledAt: new Date() })
+					.where(eq(threadShareIds.thread, thread.id));
+			});
+
+			return reply.status(204).send();
+		},
+	);
+
+	fastify.get<{
+		Params: { slug: string; chatID: string };
+	}>(
+		"/shared/:chatID",
+		{
+			preHandler: [personaLoader(fastify)],
+			schema: {
+				params: z.object({
+					slug: z.string(),
+					chatID: z.string(),
+				}),
+			},
+		},
+		async (request, reply) => {
+			const response = await fastify.db.query.threadShareIds.findFirst({
+				columns: { lastMessage: true },
+				with: {
+					thread: {
+						columns: {
+							author: false,
+							persona: false,
+							model: false,
+							deletedBy: false,
+							deletedAt: false,
+						},
+						with: {
+							author: {
+								columns: {
+									id: true,
+									name: true,
+									isAnonymous: true,
+								},
+							},
+							persona: {
+								columns: {
+									id: true,
+									name: true,
+									slug: true,
+								},
+							},
+						},
+					},
+				},
+				where: (tsi, { eq, and, isNull }) =>
+					and(eq(tsi.id, request.params.chatID), isNull(tsi.disabledAt)),
+			});
+
+			if (!response) {
+				return reply.send({ data: null });
+			}
+
+			const { thread, lastMessage: lastMessageShared } = response;
+
+			const threadMessages = thread.messages;
+			const lastMessageIndex = lastMessageShared
+				? threadMessages.findIndex((i) => i.id === lastMessageShared)
+				: -1;
+
+			const sharedMessages =
+				lastMessageIndex >= 0
+					? thread.messages.slice(0, lastMessageIndex + 1)
+					: thread.messages;
+
+			return reply.send({
+				data: { ...thread, messages: sharedMessages },
+			});
 		},
 	);
 

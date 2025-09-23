@@ -1,0 +1,1 @@
+ALTER TABLE "thread_shared_ids" ADD COLUMN "last_message" text;

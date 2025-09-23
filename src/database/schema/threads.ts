@@ -6,10 +6,11 @@ import {
 	timestamp,
 	index,
 	pgEnum,
+	uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { users } from "./auth";
 import { personas } from "./personas";
-import { desc, relations } from "drizzle-orm";
+import { desc, relations, isNull } from "drizzle-orm";
 import type { UIMessage } from "ai";
 import { createId } from "@paralleldrive/cuid2";
 
@@ -55,7 +56,28 @@ export const threads = pgTable(
 	}),
 );
 
-export const threadRelations = relations(threads, ({ one }) => ({
+export const threadShareIds = pgTable(
+	"thread_shared_ids",
+	{
+		id: text()
+			.primaryKey()
+			.unique()
+			.$default(() => createId()),
+		thread: text()
+			.notNull()
+			.references(() => threads.id, { onDelete: "cascade" }),
+		lastMessage: text(),
+		disabledAt: timestamp(),
+	},
+	(table) => ({
+		threadShareIdsIdx: uniqueIndex().on(table.id),
+		threadShareIdsThreadIdx: uniqueIndex()
+			.on(table.thread)
+			.where(isNull(table.disabledAt)),
+	}),
+);
+
+export const threadRelations = relations(threads, ({ one, many }) => ({
 	author: one(users, {
 		fields: [threads.author],
 		references: [users.id],
@@ -63,5 +85,13 @@ export const threadRelations = relations(threads, ({ one }) => ({
 	persona: one(personas, {
 		fields: [threads.persona],
 		references: [personas.id],
+	}),
+	shareIds: many(threadShareIds),
+}));
+
+export const threadShareIdsRelations = relations(threadShareIds, ({ one }) => ({
+	thread: one(threads, {
+		fields: [threadShareIds.thread],
+		references: [threads.id],
 	}),
 }));
