@@ -147,10 +147,11 @@ export default function (
 						eq(trainingAssets.status, "pending"),
 						isNull(trainingAssets.deletedAt),
 					),
-				);
+				)
+				.then(([res]) => res.count || 0);
 
 			const trainingStatus =
-				pendingTrainingAssets.length > 0 ? "pending" : "completed";
+				pendingTrainingAssets > 0 ? "pending" : "completed";
 
 			return reply.send({
 				data: {
