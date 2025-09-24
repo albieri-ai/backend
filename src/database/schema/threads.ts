@@ -7,6 +7,7 @@ import {
 	index,
 	pgEnum,
 	uniqueIndex,
+	boolean,
 } from "drizzle-orm/pg-core";
 import { users } from "./auth";
 import { personas } from "./personas";
@@ -36,6 +37,9 @@ export const threads = pgTable(
 		messages: jsonb().notNull().$type<UIMessage[]>(),
 		model: varchar().notNull(),
 		visibility: ThreadVisibility().notNull().default("private"),
+		pinned: boolean().notNull().default(false),
+		helpNeeded: boolean().notNull().default(false),
+		helpReason: text(),
 
 		deletedBy: varchar().references(() => users.id),
 

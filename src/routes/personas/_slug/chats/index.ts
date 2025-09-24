@@ -654,6 +654,22 @@ export default function (
 								);
 						},
 					}),
+					ask_for_help: tool({
+						description:
+							"Whenever you don't have enough information to answer a question, ask for a humam to help with this question.",
+						inputSchema: z.object({
+							reason: z.string(),
+						}),
+						execute: async ({ reason }) => {
+							await fastify.db
+								.update(threads)
+								.set({
+									helpNeeded: true,
+									helpReason: reason,
+								})
+								.where(eq(threads.id, request.params.chatID));
+						},
+					}),
 				},
 				stopWhen: stepCountIs(20),
 			});
