@@ -79,6 +79,7 @@ const aiPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 						),
 					),
 				)
+				.limit(5)
 				.orderBy(
 					desc(sql`1 - (${cosineDistance(assetSummary.embeddings, embed)})`),
 				);
@@ -106,7 +107,8 @@ const aiPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 			)
 			.orderBy(
 				desc(sql`1 - (${cosineDistance(assetSummary.embeddings, embed)})`),
-			);
+			)
+			.limit(5);
 
 		return chunks;
 	}
@@ -176,6 +178,7 @@ const aiPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 					),
 				),
 			)
+			.limit(5)
 			.orderBy(
 				desc(sql`1 - (${cosineDistance(assetSummary.embeddings, embed)})`),
 			)) as { id: string; title: string; summary: string; url: string }[];
@@ -237,8 +240,7 @@ const aiPlugin: FastifyPluginAsync<{}> = async (fastify: FastifyInstance) => {
 				desc(courseSummarySimilarity),
 				desc(courseModuleSummarySimilarity),
 				desc(courseLessonSummarySimilarity),
-			)
-			.limit(5)) as {
+			)) as {
 			id: string;
 			name: string;
 			summary: string;
