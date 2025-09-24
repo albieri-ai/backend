@@ -8,7 +8,11 @@ import {
 	type UIMessage,
 	stepCountIs,
 } from "ai";
-import { threads, threadShareIds } from "../../../../database/schema";
+import {
+	threads,
+	threadShareIds,
+	userMessages,
+} from "../../../../database/schema";
 import { eq, and, sql, isNull, count, ilike } from "drizzle-orm";
 import { personaLoader } from "../../../../lib/personaLoader";
 import { z } from "zod";
@@ -689,6 +693,22 @@ export default function (
 								updatedAt: sql`NOW()`,
 							})
 							.where(eq(threads.id, request.params.chatID));
+
+						if (request.user?.id) {
+							const messageCount = await fastify.db
+								.select({ count: count().as("count") })
+								.from(userMessages)
+								.where(eq(userMessages.author, request.user!.id))
+								.then(([res]) => res?.count || 0);
+
+							fastify.posthog.identifyImmediate({
+								distinctId: request.user!.id,
+								properties: {
+									messages: messageCount,
+									nps_ready: messageCount >= 5,
+								},
+							});
+						}
 					},
 				}),
 			);
