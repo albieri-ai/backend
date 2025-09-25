@@ -44,7 +44,7 @@ export default function (
 		},
 		async (request, reply) => {
 			if (!request.user?.id) {
-				return reply.forbidden();
+				return reply.status(403).send({ message: "Unauthorized" });
 			}
 
 			let baseQuery = and(
