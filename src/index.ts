@@ -64,6 +64,8 @@ async function createServer() {
 				"RESEND_API_KEY",
 				"VIMEO_CLIENT_ID",
 				"VIMEO_CLIENT_SECRET",
+				"FACEBOOK_PIXEL_ID",
+				"FACEBOOK_ACCESS_TOKEN",
 			],
 			properties: {
 				PORT: {
@@ -121,6 +123,12 @@ async function createServer() {
 				VIMEO_CLIENT_SECRET: {
 					type: "string",
 				},
+				FACEBOOK_PIXEL_ID: {
+					type: "string",
+				},
+				FACEBOOK_ACCESS_TOKEN: {
+					type: "string",
+				},
 			},
 		},
 	});
@@ -165,6 +173,8 @@ declare module "fastify" {
 			RESEND_API_KEY: string;
 			VIMEO_CLIENT_ID: string;
 			VIMEO_CLIENT_SECRET: string;
+			FACEBOOK_PIXEL_ID: string;
+			FACEBOOK_ACCESS_TOKEN: string;
 		};
 		db: NodePgDatabase<typeof schema> & { $client: pg.Client };
 		auth: typeof auth;
