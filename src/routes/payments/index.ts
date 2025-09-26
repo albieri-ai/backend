@@ -167,6 +167,7 @@ export default function (
 			customer_email: request.user!.email,
 			customer: stripeCustomer?.id,
 			mode: "subscription",
+			allow_promotion_codes: true,
 			line_items: [
 				{
 					price: baseSubscriptionPriceId,
