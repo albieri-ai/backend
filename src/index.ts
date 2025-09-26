@@ -181,6 +181,7 @@ declare module "fastify" {
 		s3: S3Client;
 		stripe: Stripe;
 		posthog: PostHog;
+		facebookTracker: any;
 		ai: {
 			providers: {
 				gemini: ReturnType<typeof createGoogleGenerativeAI>;

@@ -184,6 +184,13 @@ export default function (
 			success_url: `${fastify.config.APP_URL}/onboarding/comecar`,
 		});
 
+		await fastify.facebookTracker.trackInitiateCheckout({
+			email: request.user.email,
+			currency: "BRL",
+			successUrl: session.url || undefined,
+			timestamp: Math.floor(Date.now() / 1000),
+		});
+
 		return reply.send({ data: { url: session.url! } });
 	});
 }

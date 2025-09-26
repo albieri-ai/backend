@@ -131,6 +131,13 @@ export default function (
 			subscription: albieriSubscription.id,
 			workflowId: schedule.id,
 		});
+
+		await fastify.facebookTracker.trackPurchase({
+			email: customer.email || "",
+			currency: subscription.currency.toUpperCase() || "USD",
+			amount: subscription.items.data[0]?.price?.unit_amount || 0,
+			timestamp: subscription.created,
+		});
 	}
 
 	async function handleSubscriptionUpdated(subscriptionId: string) {
