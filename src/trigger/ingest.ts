@@ -45,7 +45,13 @@ export const IngestYoutubeVideo = task({
 			addVideoInfo: true,
 		});
 
-		const docs = await loader.load();
+		const docs = await loader.load().catch(() => {
+			return [];
+		});
+
+		if (!docs?.length) {
+			return;
+		}
 
 		logger.info(`docs loaded for ${payload.assetID}`);
 
