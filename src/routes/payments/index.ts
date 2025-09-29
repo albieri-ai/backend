@@ -1,4 +1,6 @@
 import type { FastifyInstance, FastifyServerOptions } from "fastify";
+import { subscriptions } from "../../database/schema";
+import { eq } from "drizzle-orm";
 
 export default function (
 	fastify: FastifyInstance,
@@ -57,7 +59,11 @@ export default function (
 		}
 
 		const subscription = await fastify.db.query.subscriptions.findFirst({
-			where: (s, { eq }) => eq(s.organization, organization.organization.id),
+			where: (s, { eq, or, and, isNull }) =>
+				or(
+					eq(s.organization, organization.organization.id),
+					and(eq(s.owner, request.user!.id), isNull(s.organization)),
+				),
 		});
 
 		if (!subscription) {
@@ -67,6 +73,15 @@ export default function (
 		const stripeSubscription = await fastify.stripe.subscriptions.retrieve(
 			subscription.stripeId,
 		);
+
+		if (stripeSubscription && !subscription.organization) {
+			await fastify.db
+				.update(subscriptions)
+				.set({ organization: organization.organization.id })
+				.where(eq(subscriptions.id, subscription.id));
+		} else if (!stripeSubscription) {
+			return reply.send({ data: null });
+		}
 
 		return reply.send({
 			data: {
