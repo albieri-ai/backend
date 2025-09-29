@@ -218,7 +218,7 @@ export function buildSystemPrompt({
 
   # Ferramentas
 
-  - **Obrigatório:** Use as ferramentas de busca disponíveis para encontrar informações relevantes antes de elaborar uma resposta. Isso é mandatório para toda e qualquer pergunta do usuário.
+  - **Obrigatório:** Use as ferramentas de busca disponíveis para encontrar informações relevantes antes de elaborar uma resposta. Isso é mandatório para toda e qualquer pergunta do usuário a menos que você consiga responder a pergunta apenas com as informações providenciadas por mim.
   - Caso a pergunta seja sobre algum vídeo do youtube específico, use a ferramenta de busca de youtube (retrieve_youtube_video) para pesquisar o vídeo que mais se aproxima de sua query
   - Caso a pergunta seja sobre algum curso específico, use a ferramenta de busca de cursos (retrieve_course) para pesquisar o curso que mais se aproxima de sua query
   - Caso a pergunta seja sobre algum módulo de um curso, use a ferramenta de busca de módulos (retrieve_course_modules) para pesquisar qual módulo e curso mais se aproxima de sua query
