@@ -189,7 +189,7 @@ export default function (
 				}
 			} else if (!updatedFeed.keepSynced && oldFeed.keepSynced) {
 				if (updatedFeed.triggerId) {
-					await schedules.deactivate(updatedFeed.triggerId);
+					await schedules.deactivate(updatedFeed.triggerId).catch(() => null);
 				}
 			}
 
@@ -252,7 +252,7 @@ export default function (
 					);
 
 				if (channel.triggerId) {
-					await schedules.deactivate(channel.triggerId);
+					await schedules.deactivate(channel.triggerId).catch(() => null);
 				}
 
 				if (request.query.remove_content) {

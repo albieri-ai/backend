@@ -183,7 +183,7 @@ export default function (
 				);
 
 			if (workflow) {
-				await schedules.deactivate(workflow.workflowId!);
+				await schedules.deactivate(workflow.workflowId!).catch(() => null);
 			}
 		}
 	}

@@ -269,7 +269,9 @@ export default function (
 				}
 			} else if (!updatedChannel.keepSynced && oldChannel.keepSynced) {
 				if (updatedChannel.triggerId) {
-					await schedules.deactivate(updatedChannel.triggerId);
+					await schedules
+						.deactivate(updatedChannel.triggerId)
+						.catch(() => null);
 				}
 			}
 
@@ -332,7 +334,7 @@ export default function (
 					);
 
 				if (channel.triggerId) {
-					await schedules.deactivate(channel.triggerId);
+					await schedules.deactivate(channel.triggerId).catch(() => null);
 				}
 
 				if (request.query.remove_content) {
