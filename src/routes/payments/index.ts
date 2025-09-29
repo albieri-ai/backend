@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyServerOptions } from "fastify";
 import { subscriptions } from "../../database/schema";
 import { eq } from "drizzle-orm";
+import z from "zod";
 
 export default function (
 	fastify: FastifyInstance,
@@ -197,16 +198,40 @@ export default function (
 			],
 			ui_mode: "hosted",
 			locale: "pt-BR",
-			success_url: `${fastify.config.APP_URL}/onboarding/comecar`,
+			success_url: `${fastify.config.APP_URL}/payments/success`,
 		});
-
-		// await fastify.facebookTracker.trackInitiateCheckout({
-		// 	email: request.user.email,
-		// 	currency: "BRL",
-		// 	successUrl: session.url || undefined,
-		// 	timestamp: Math.floor(Date.now() / 1000),
-		// });
 
 		return reply.send({ data: { url: session.url! } });
 	});
+
+	fastify.get<{ Params: { sessionId: string } }>(
+		"/checkout/session/:sessionId",
+		{
+			schema: {
+				params: z.object({
+					sessionId: z.string(),
+				}),
+			},
+		},
+		async (request, reply) => {
+			console.log("checkout id: ", request.params.sessionId);
+
+			const checkoutSession = await fastify.stripe.checkout.sessions.retrieve(
+				request.params.sessionId,
+			);
+
+			reply.send({
+				data: {
+					id: checkoutSession.id,
+					paymentStatus: checkoutSession.payment_status,
+					amountTotal: checkoutSession.amount_total,
+					customer: checkoutSession.customer,
+					customerEmail: checkoutSession.customer_email,
+					currency: checkoutSession.currency,
+					status: checkoutSession.status,
+					subscription: checkoutSession.subscription,
+				},
+			});
+		},
+	);
 }
