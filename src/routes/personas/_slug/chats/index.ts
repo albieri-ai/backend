@@ -685,6 +685,9 @@ export default function (
 				result.toUIMessageStreamResponse({
 					generateMessageId: () => createId(),
 					originalMessages: request.body.messages,
+					messageMetadata: () => ({
+						createdAt: new Date().toISOString(),
+					}),
 					onFinish: async ({ messages }) => {
 						await fastify.db
 							.update(threads)
@@ -712,6 +715,69 @@ export default function (
 					},
 				}),
 			);
+		},
+	);
+
+	fastify.post<{
+		Params: { slug: string; chatID: string };
+		Body: { content: string };
+	}>(
+		"/:chatID/admin-message",
+		{
+			preHandler: [personaLoader(fastify)],
+			schema: {
+				params: z.object({
+					slug: z.string(),
+					chatID: z.string(),
+				}),
+				body: z.object({
+					content: z.string().min(1),
+				}),
+			},
+		},
+		async (request, reply) => {
+			const thread = await fastify.db.query.threads.findFirst({
+				where: () =>
+					and(
+						eq(threads.persona, request.persona!.id),
+						eq(threads.id, request.params.chatID),
+					),
+			});
+
+			if (!thread) {
+				return reply.callNotFound();
+			}
+
+			const newMessage: UIMessage = {
+				id: createId(),
+				role: "assistant",
+				parts: [
+					{
+						type: "text",
+						text: request.body.content,
+					},
+				],
+				metadata: { createdAt: new Date(), admin: true },
+			};
+
+			const updatedMessages = [...thread.messages, newMessage];
+
+			await fastify.db
+				.update(threads)
+				.set({
+					messages: updatedMessages,
+					helpNeeded: false,
+					helpReason: null,
+					updatedAt: sql`NOW()`,
+				})
+				.where(eq(threads.id, request.params.chatID));
+
+			return reply.send({
+				data: {
+					message: newMessage,
+					messagesCount: updatedMessages.length,
+				},
+			});
 		},
 	);
 }
