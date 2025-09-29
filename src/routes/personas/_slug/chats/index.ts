@@ -273,7 +273,6 @@ export default function (
 			},
 		},
 		async (request, reply) => {
-			console.log("aqui");
 			await fastify.db.transaction(async (trx) => {
 				const [thread] = await trx
 					.update(threads)
@@ -720,7 +719,7 @@ export default function (
 
 	fastify.post<{
 		Params: { slug: string; chatID: string };
-		Body: { content: string };
+		Body: { message: string };
 	}>(
 		"/:chatID/admin-message",
 		{
@@ -731,7 +730,7 @@ export default function (
 					chatID: z.string(),
 				}),
 				body: z.object({
-					content: z.string().min(1),
+					message: z.string().min(1),
 				}),
 			},
 		},
@@ -754,7 +753,7 @@ export default function (
 				parts: [
 					{
 						type: "text",
-						text: request.body.content,
+						text: request.body.message,
 					},
 				],
 				metadata: { createdAt: new Date(), admin: true },
