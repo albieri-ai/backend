@@ -238,7 +238,6 @@ export default function (
 				columns: {
 					persona: false,
 					author: false,
-					messages: false,
 					model: false,
 					deletedAt: false,
 					deletedBy: false,
@@ -285,8 +284,14 @@ export default function (
 			const hasPreviousPage =
 				previousPage > 0 && previousPage < request.query.page;
 
+			const threadData = memberThreads.map((t) => ({
+				...t,
+				messages: undefined,
+				lastMessage: t.messages[t.messages.length - 1],
+			}));
+
 			return reply.send({
-				data: memberThreads,
+				data: threadData,
 				pagination: {
 					pagination: {
 						totalRecords: threadCount,

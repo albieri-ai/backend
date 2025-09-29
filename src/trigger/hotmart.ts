@@ -98,8 +98,6 @@ export const HotmartCourseImport = task({
 			],
 		);
 
-		console.log("aqui 2");
-
 		const allModules = [...normalModules, ...extraModules];
 
 		const lessons = await Promise.all(
@@ -117,8 +115,6 @@ export const HotmartCourseImport = task({
 					.then(({ data }) => data),
 			),
 		).then((r) => r.flatMap((r2) => r2));
-
-		console.log("aqui 3");
 
 		const lessonsContent = await Promise.all(
 			lessons.map((l) =>
@@ -168,9 +164,7 @@ export const HotmartCourseImport = task({
 									},
 								},
 							)
-							.catch((err) => {
-								console.log("error aqui: ", l.id);
-
+							.catch(() => {
 								return { data: [] };
 							});
 
@@ -197,8 +191,6 @@ export const HotmartCourseImport = task({
 					}),
 			),
 		).then((res) => res.filter((r) => r !== null));
-
-		console.log("content: ", lessonsContent);
 
 		const { db } = await createDb({
 			connectionString: process.env.DATABASE_URL!,

@@ -135,7 +135,7 @@ export default function (
 					.insert(youtubeChannels)
 					.values({
 						persona: request.persona!.id,
-						url: `https://www.youtube.com/@${data.items[0].snippet.customUrl}`,
+						url: `https://www.youtube.com/${data.items[0].snippet.customUrl}`,
 						name: data.items[0].snippet.title,
 						channelID: request.body.channelID,
 						thumbnailUrl:
