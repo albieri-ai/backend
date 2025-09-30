@@ -181,7 +181,6 @@ export default function (
 		const session = await fastify.stripe.checkout.sessions.create({
 			client_reference_id: request.user!.id,
 			customer_email: request.user!.email,
-			phone_number_collection: true,
 			customer: stripeCustomer?.id,
 			mode: "subscription",
 			allow_promotion_codes: true,
