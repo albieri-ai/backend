@@ -181,6 +181,7 @@ export default function (
 		const session = await fastify.stripe.checkout.sessions.create({
 			client_reference_id: request.user!.id,
 			customer_email: request.user!.email,
+			phone_number_collection: true,
 			customer: stripeCustomer?.id,
 			mode: "subscription",
 			allow_promotion_codes: true,
@@ -198,7 +199,7 @@ export default function (
 			],
 			ui_mode: "hosted",
 			locale: "pt-BR",
-			success_url: `${fastify.config.APP_URL}/payments/success`,
+			success_url: `${fastify.config.APP_URL}/payments/success?session_id={CHECKOUT_SESSION_ID}`,
 		});
 
 		return reply.send({
