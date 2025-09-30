@@ -201,7 +201,13 @@ export default function (
 			success_url: `${fastify.config.APP_URL}/payments/success`,
 		});
 
-		return reply.send({ data: { url: session.url! } });
+		return reply.send({
+			data: {
+				url: session.url!,
+				currency: session.currency,
+				amountTotal: session.amount_total,
+			},
+		});
 	});
 
 	fastify.get<{ Params: { sessionId: string } }>(
