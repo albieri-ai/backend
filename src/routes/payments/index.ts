@@ -241,13 +241,6 @@ export default function (
 					currency: checkoutSession.currency,
 					status: checkoutSession.status,
 					subscription: checkoutSession.subscription,
-					items: checkoutSession.line_items?.data.map((it) => ({
-						id: it.id,
-						name: it.description,
-						currency: it.currency,
-						amountTotal: it.amount_total,
-						quantity: it.quantity,
-					})),
 				},
 			});
 		},
