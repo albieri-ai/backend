@@ -206,6 +206,13 @@ export default function (
 				url: session.url!,
 				currency: session.currency,
 				amountTotal: session.amount_total,
+				items: session.line_items?.data.map((it) => ({
+					id: it.id,
+					name: it.description,
+					currency: it.currency,
+					price: it.price,
+					quantity: it.quantity,
+				})),
 			},
 		});
 	});
@@ -220,8 +227,6 @@ export default function (
 			},
 		},
 		async (request, reply) => {
-			console.log("checkout id: ", request.params.sessionId);
-
 			const checkoutSession = await fastify.stripe.checkout.sessions.retrieve(
 				request.params.sessionId,
 			);
@@ -236,6 +241,13 @@ export default function (
 					currency: checkoutSession.currency,
 					status: checkoutSession.status,
 					subscription: checkoutSession.subscription,
+					items: checkoutSession.line_items?.data.map((it) => ({
+						id: it.id,
+						name: it.description,
+						currency: it.currency,
+						amountTotal: it.amount_total,
+						quantity: it.quantity,
+					})),
 				},
 			});
 		},
