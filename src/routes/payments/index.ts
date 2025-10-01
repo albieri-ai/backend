@@ -143,79 +143,86 @@ export default function (
 		return reply.send({ data: { url: session.url } });
 	});
 
-	fastify.post("/checkout/session", async (request, reply) => {
-		if (!request.user) {
-			return reply.status(401).send({ error: "Unauthorized" });
-		}
+	fastify.post<{ Querystring: { plan: string } }>(
+		"/checkout/session",
+		{
+			schema: {
+				querystring: z.object({
+					plan: z.string().default("basic"),
+				}),
+			},
+		},
+		async (request, reply) => {
+			if (!request.user) {
+				return reply.status(401).send({ error: "Unauthorized" });
+			}
 
-		const env = fastify.config.APP_ENV;
-		const baseSubscriptionPriceId =
-			env === "production"
-				? "price_1S752EIXzF0eOiKFZH5YH3SQ"
-				: "price_1S74paIbAFGq3bR6IeBiua05";
-		const messagesPackagePriceId =
-			env === "production"
-				? "price_1S756zIXzF0eOiKF9HwYROSP"
-				: "price_1SADqkIbAFGq3bR66QHZmTw3";
-		const wordsPackagePriceId =
-			env === "production"
-				? "price_1S756VIXzF0eOiKFJNs394SB"
-				: "price_1SADpaIbAFGq3bR6oGDz9MKN";
-
-		const { data } = await fastify.stripe.customers.list({
-			email: request.user!.email,
-		});
-		const stripeCustomer = data?.[0];
-
-		if (stripeCustomer) {
-			const { data } = await fastify.stripe.subscriptions.list({
-				customer: stripeCustomer.id,
-				price: baseSubscriptionPriceId,
+			const plan = await fastify.db.query.subscriptionPlans.findFirst({
+				where: (sub, { eq }) => eq(sub.key, request.query.plan),
 			});
 
-			if (data.find((d) => d.status !== "canceled" && d.status !== "paused")) {
-				return reply.status(400).send({ error: "Active subscription found" });
+			if (!plan) {
+				return reply.status(404).send({ error: "Plan not found" });
 			}
-		}
 
-		const session = await fastify.stripe.checkout.sessions.create({
-			client_reference_id: request.user!.id,
-			customer_email: request.user!.email,
-			customer: stripeCustomer?.id,
-			mode: "subscription",
-			allow_promotion_codes: true,
-			line_items: [
-				{
-					price: baseSubscriptionPriceId,
-					quantity: 1,
-				},
-				{
-					price: messagesPackagePriceId,
-				},
-				{
-					price: wordsPackagePriceId,
-				},
-			],
-			ui_mode: "hosted",
-			locale: "pt-BR",
-			success_url: `${fastify.config.APP_URL}/payments/success?session_id={CHECKOUT_SESSION_ID}`,
-		});
+			const limits = await fastify.db.query.subscriptionPlanLimits.findMany({
+				where: (sl, { eq }) => eq(sl.plan, plan.id),
+			});
 
-		return reply.send({
-			data: {
-				url: session.url!,
-				currency: session.currency,
-				amountTotal: session.amount_total,
-				items: session.line_items?.data.map((it) => ({
-					id: it.id,
-					name: it.description,
-					currency: it.currency,
-					price: it.price,
-					quantity: it.quantity,
-				})),
-			},
-		});
-	});
+			const { data } = await fastify.stripe.customers.list({
+				email: request.user!.email,
+			});
+			const stripeCustomer = data?.[0];
+
+			if (stripeCustomer) {
+				const { data } = await fastify.stripe.subscriptions.list({
+					customer: stripeCustomer.id,
+					price: plan.stripeId,
+				});
+
+				if (
+					data.find((d) => d.status !== "canceled" && d.status !== "paused")
+				) {
+					return reply.status(400).send({ error: "Active subscription found" });
+				}
+			}
+
+			const session = await fastify.stripe.checkout.sessions.create({
+				client_reference_id: request.user!.id,
+				customer_email: request.user!.email,
+				customer: stripeCustomer?.id,
+				mode: "subscription",
+				allow_promotion_codes: true,
+				line_items: [
+					{
+						price: plan.stripeId,
+						quantity: 1,
+					},
+					...limits.map((l) => ({
+						price: l.stripeId,
+					})),
+				],
+				ui_mode: "hosted",
+				locale: "pt-BR",
+				success_url: `${fastify.config.APP_URL}/payments/success?session_id={CHECKOUT_SESSION_ID}`,
+			});
+
+			return reply.send({
+				data: {
+					url: session.url!,
+					currency: session.currency,
+					amountTotal: session.amount_total,
+					items: session.line_items?.data.map((it) => ({
+						id: it.id,
+						name: it.description,
+						currency: it.currency,
+						price: it.price,
+						quantity: it.quantity,
+					})),
+				},
+			});
+		},
+	);
 
 	fastify.get<{ Params: { sessionId: string } }>(
 		"/checkout/session/:sessionId",

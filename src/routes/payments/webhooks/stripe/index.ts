@@ -70,6 +70,22 @@ export default function (
 				})) as InferSelectModel<typeof personas> | null;
 			}
 
+			const subscriptionPlan = await trx.query.subscriptionPlans.findFirst({
+				columns: {
+					id: true,
+				},
+				with: {
+					limits: true,
+				},
+				where: (sp, { inArray }) =>
+					inArray(
+						sp.stripeId,
+						subscription.items.data
+							.filter((d) => !d.deleted && d.quantity && d.quantity > 0)
+							.map((d) => d.price.id),
+					),
+			});
+
 			const insertedSubscription = await trx
 				.insert(subscriptions)
 				.values({
@@ -94,18 +110,16 @@ export default function (
 				.returning()
 				.then(([res]) => res);
 
-			await trx.insert(subscriptionLimits).values([
-				{
-					subscription: insertedSubscription.id,
-					key: "messages",
-					value: "3000",
-				},
-				{
-					subscription: insertedSubscription.id,
-					key: "words",
-					value: "1000000",
-				},
-			]);
+			if (subscriptionPlan?.limits?.length) {
+				await trx.insert(subscriptionLimits).values(
+					subscriptionPlan?.limits.map((lim) => ({
+						subscription: insertedSubscription.id,
+						key: lim.key,
+						limit: lim.id,
+						value: lim.value.toFixed(0),
+					})),
+				);
+			}
 
 			fastify.posthog.capture({
 				event: "subscription created",
@@ -131,13 +145,6 @@ export default function (
 			subscription: albieriSubscription.id,
 			workflowId: schedule.id,
 		});
-
-		// await fastify.facebookTracker.trackPurchase({
-		// 	email: customer.email || "",
-		// 	currency: subscription.currency.toUpperCase() || "USD",
-		// 	amount: subscription.items.data[0]?.price?.unit_amount || 0,
-		// 	timestamp: subscription.created,
-		// });
 	}
 
 	async function handleSubscriptionUpdated(subscriptionId: string) {

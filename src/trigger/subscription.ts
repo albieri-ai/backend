@@ -5,11 +5,10 @@ import {
 	organizations,
 	personas,
 	stripeCustomerId,
-	subscriptionLimits,
 	subscriptions,
 	userMessages,
 } from "../database/schema";
-import { and, between, count, eq, getTableColumns, or, sum } from "drizzle-orm";
+import { and, between, count, eq, getTableColumns, sum } from "drizzle-orm";
 import Stripe from "stripe";
 
 export const TrackSubscriptionUsage = schedules.task({
@@ -68,95 +67,94 @@ export const TrackSubscriptionUsage = schedules.task({
 			return;
 		}
 
-		const extraWordsItem = stripeSubscription.items.data.find(
-			(d) =>
-				d.price.id === "price_1S756VIXzF0eOiKFJNs394SB" ||
-				d.price.id === "price_1SADpaIbAFGq3bR6oGDz9MKN",
-		);
-		const extraMessagesItem = stripeSubscription.items.data.find(
-			(d) =>
-				d.price.id === "price_1S756zIXzF0eOiKF9HwYROSP" ||
-				d.price.id === "price_1SADqkIbAFGq3bR66QHZmTw3",
-		);
+		const limits = await db.query.subscriptionLimits.findMany({
+			columns: {
+				limit: false,
+			},
+			with: {
+				limit: true,
+			},
+			where: (sl, { eq }) => eq(sl.subscription, subscription.id),
+		});
 
-		const defaultLimits = await db
-			.select()
-			.from(subscriptionLimits)
-			.where(
-				and(
-					eq(subscriptionLimits.subscription, subscription.id),
-					or(
-						eq(subscriptionLimits.key, "words"),
-						eq(subscriptionLimits.key, "messages"),
-					),
-				),
-			);
+		for (const limit of limits) {
+			// update to count training assets
+			if (limit.limit?.stripeMeterId === "albieri_words") {
+				const extraItem = stripeSubscription.items.data.find(
+					(d) => d.price.id === limit.limit?.stripeMeterId,
+				);
 
-		if (extraWordsItem) {
-			const wordLimit = defaultLimits.find((d) => d.key === "words");
-			const wordLimitCount = wordLimit?.value ? parseInt(wordLimit?.value) : 0;
+				if (!extraItem) {
+					continue;
+				}
 
-			const words = await db
-				.select({
-					words: sum(userMessages.wordCount).as("words"),
-				})
-				.from(userMessages)
-				.where(
-					and(
-						eq(userMessages.persona, persona.id),
-						between(
-							userMessages.date,
-							new Date(extraWordsItem.current_period_start),
-							new Date(extraWordsItem.current_period_end),
+				const words = await db
+					.select({
+						words: sum(userMessages.wordCount).as("words"),
+					})
+					.from(userMessages)
+					.where(
+						and(
+							eq(userMessages.persona, persona.id),
+							between(
+								userMessages.date,
+								new Date(extraItem.current_period_start),
+								new Date(extraItem.current_period_end),
+							),
 						),
-					),
-				)
-				.groupBy(userMessages.persona)
-				.then(([res]) => res?.words || "0");
+					)
+					.groupBy(userMessages.persona)
+					.then(([res]) => res?.words || "0");
 
-			if (parseInt(words) > wordLimitCount) {
-				await stripe.billing.meterEvents.create({
-					event_name: "albieri_words",
-					payload: {
-						stripe_customer_id: stripeCustomer.stripeId,
-						value: (parseInt(words) - wordLimitCount).toFixed(0),
-					},
-				});
-			}
-		}
+				const wordLimitCount = limit?.value ? parseInt(limit?.value) || 0 : 0;
 
-		if (extraMessagesItem) {
-			const messageLimit = defaultLimits.find((d) => d.key === "messages");
-			const messageLimitCount = messageLimit?.value
-				? parseInt(messageLimit?.value)
-				: 0;
+				if (parseInt(words) > wordLimitCount) {
+					await stripe.billing.meterEvents.create({
+						event_name: "albieri_words",
+						payload: {
+							stripe_customer_id: stripeCustomer.stripeId,
+							value: (parseInt(words) - wordLimitCount).toFixed(0),
+						},
+					});
+				}
+			} else if (limit.limit?.stripeMeterId === "albieri_messages") {
+				const extraItem = stripeSubscription.items.data.find(
+					(d) => d.price.id === limit.limit?.stripeMeterId,
+				);
 
-			const messages = await db
-				.select({
-					messages: count().as("messages"),
-				})
-				.from(userMessages)
-				.where(
-					and(
-						eq(userMessages.persona, persona.id),
-						between(
-							userMessages.date,
-							new Date(extraMessagesItem.current_period_start),
-							new Date(extraMessagesItem.current_period_end),
+				if (!extraItem) {
+					continue;
+				}
+
+				const messageCount = await db
+					.select({
+						messages: count().as("messages"),
+					})
+					.from(userMessages)
+					.where(
+						and(
+							eq(userMessages.persona, persona.id),
+							between(
+								userMessages.date,
+								new Date(extraItem.current_period_start),
+								new Date(extraItem.current_period_end),
+							),
 						),
-					),
-				)
-				.groupBy(userMessages.persona)
-				.then(([res]) => res?.messages || 0);
+					)
+					.groupBy(userMessages.persona)
+					.then(([res]) => res?.messages || 0);
 
-			if (messages > messageLimitCount) {
-				await stripe.billing.meterEvents.create({
-					event_name: "albieri_messages",
-					payload: {
-						stripe_customer_id: stripeCustomer.stripeId,
-						value: (messages - messageLimitCount).toFixed(0),
-					},
-				});
+				const limitCount = limit?.value ? parseInt(limit?.value) || 0 : 0;
+
+				if (messageCount > limitCount) {
+					await stripe.billing.meterEvents.create({
+						event_name: "albieri_messages",
+						payload: {
+							stripe_customer_id: stripeCustomer.stripeId,
+							value: (messageCount - limitCount).toFixed(0),
+						},
+					});
+				}
 			}
 		}
 	},
