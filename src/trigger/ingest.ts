@@ -53,6 +53,10 @@ export const IngestYoutubeVideo = task({
 			return;
 		}
 
+		const wordCount = docs
+			.map((d) => d.pageContent.split(" ").length)
+			.reduce((acc, w) => acc + w, 0);
+
 		logger.info(`docs loaded for ${payload.assetID}`);
 
 		const textSplitter = new RecursiveCharacterTextSplitter({
@@ -104,6 +108,7 @@ export const IngestYoutubeVideo = task({
 			await trx.update(trainingAssets).set({
 				enabled: true,
 				status: "ready",
+				wordCount: wordCount,
 			});
 
 			await trx
@@ -165,6 +170,10 @@ export const IngestPdfDocument = task({
 
 		const docs = await loader.load();
 
+		const wordCount = docs
+			.map((d) => d.pageContent.split(" ").length)
+			.reduce((acc, w) => acc + w, 0);
+
 		logger.info(`docs loaded for ${payload.assetID}`);
 
 		const textSplitter = new RecursiveCharacterTextSplitter({
@@ -214,6 +223,7 @@ export const IngestPdfDocument = task({
 			await trx.update(trainingAssets).set({
 				enabled: true,
 				status: "ready",
+				wordCount,
 			});
 
 			await trx.insert(assetSummary).values({
@@ -283,6 +293,8 @@ export const IngestAudioFile = task({
 
 		const fullText = segments.map((s) => s.text).join(" ");
 
+		const wordCount = fullText.split(" ").length;
+
 		const {
 			object: { summary },
 		} = await generateObject({
@@ -328,6 +340,7 @@ export const IngestAudioFile = task({
 			await trx.update(trainingAssets).set({
 				enabled: true,
 				status: "ready",
+				wordCount,
 			});
 
 			await trx

@@ -6,6 +6,7 @@ import {
 	personas,
 	stripeCustomerId,
 	subscriptions,
+	trainingAssets,
 	userMessages,
 } from "../database/schema";
 import { and, between, count, eq, getTableColumns, sum } from "drizzle-orm";
@@ -90,30 +91,20 @@ export const TrackSubscriptionUsage = schedules.task({
 
 				const words = await db
 					.select({
-						words: sum(userMessages.wordCount).as("words"),
+						count: sum(trainingAssets.wordCount).as("count"),
 					})
-					.from(userMessages)
-					.where(
-						and(
-							eq(userMessages.persona, persona.id),
-							between(
-								userMessages.date,
-								new Date(extraItem.current_period_start),
-								new Date(extraItem.current_period_end),
-							),
-						),
-					)
-					.groupBy(userMessages.persona)
-					.then(([res]) => res?.words || "0");
+					.from(trainingAssets)
+					.where(eq(trainingAssets.persona, persona.id))
+					.then((res) => (res[0]?.count ? parseInt(res[0]?.count) : 0));
 
 				const wordLimitCount = limit?.value ? parseInt(limit?.value) || 0 : 0;
 
-				if (parseInt(words) > wordLimitCount) {
+				if (words > wordLimitCount) {
 					await stripe.billing.meterEvents.create({
 						event_name: "albieri_words",
 						payload: {
 							stripe_customer_id: stripeCustomer.stripeId,
-							value: (parseInt(words) - wordLimitCount).toFixed(0),
+							value: (words - wordLimitCount).toFixed(0),
 						},
 					});
 				}

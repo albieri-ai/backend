@@ -47,6 +47,7 @@ export const trainingAssets = pgTable(
 		status: TrainingAssetStatus("status").notNull().default("pending"),
 		enabled: boolean().notNull().default(false),
 		persona: varchar().references(() => personas.id, { onDelete: "cascade" }),
+		wordCount: integer().notNull().default(0),
 		createdBy: text()
 			.notNull()
 			.references(() => users.id, { onDelete: "cascade" }),
