@@ -720,7 +720,7 @@ export default function (
 								distinctId: request.user!.id,
 								properties: {
 									messages: messageCount,
-									nps_ready: messageCount >= 5,
+									nps_ready: messageCount >= 3,
 								},
 							});
 						}
