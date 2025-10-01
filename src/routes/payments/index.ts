@@ -153,7 +153,7 @@ export default function (
 		{
 			schema: {
 				querystring: z.object({
-					plan: z.string().default("basic"),
+					plan: z.string().default("basic_monthly"),
 				}),
 			},
 		},
@@ -192,25 +192,30 @@ export default function (
 				}
 			}
 
-			const session = await fastify.stripe.checkout.sessions.create({
-				client_reference_id: request.user!.id,
-				customer_email: request.user!.email,
-				customer: stripeCustomer?.id,
-				mode: "subscription",
-				allow_promotion_codes: true,
-				line_items: [
-					{
-						price: plan.stripeId,
-						quantity: 1,
-					},
-					...limits.map((l) => ({
-						price: l.stripeId,
-					})),
-				],
-				ui_mode: "hosted",
-				locale: "pt-BR",
-				success_url: `${fastify.config.APP_URL}/payments/success?session_id={CHECKOUT_SESSION_ID}`,
-			});
+			const session = await fastify.stripe.checkout.sessions
+				.create({
+					client_reference_id: request.user!.id,
+					customer_email: request.user!.email,
+					customer: stripeCustomer?.id,
+					mode: "subscription",
+					allow_promotion_codes: true,
+					line_items: [
+						{
+							price: plan.stripeId,
+							quantity: 1,
+						},
+						...limits.map((l) => ({
+							price: l.stripeId,
+						})),
+					],
+					ui_mode: "hosted",
+					locale: "pt-BR",
+					success_url: `${fastify.config.APP_URL}/payments/success?session_id={CHECKOUT_SESSION_ID}`,
+				})
+				.catch((err) => {
+					console.error(err);
+					throw err;
+				});
 
 			return reply.send({
 				data: {
