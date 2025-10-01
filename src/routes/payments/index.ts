@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyServerOptions } from "fastify";
 import { subscriptions } from "../../database/schema";
-import { eq } from "drizzle-orm";
+import { desc, eq, or } from "drizzle-orm";
 import z from "zod";
 
 export default function (
@@ -112,12 +112,15 @@ export default function (
 			where: (m, { eq }) => eq(m.userId, request.user!.id),
 		});
 
-		if (!organization) {
-			return reply.callNotFound();
-		}
-
 		const subscription = await fastify.db.query.subscriptions.findFirst({
-			where: (s, { eq }) => eq(s.organization, organization.organization.id),
+			where: (s, { eq }) =>
+				organization
+					? or(
+							eq(s.organization, organization.organization.id),
+							eq(s.owner, request.user!.id),
+						)
+					: eq(s.owner, request.user!.id),
+			orderBy: [desc(subscriptions.createdAt)],
 		});
 
 		if (!subscription) {
@@ -134,7 +137,9 @@ export default function (
 
 		const session = await fastify.stripe.billingPortal.sessions.create({
 			customer: stripeCustomer.stripeId,
-			return_url: `${fastify.config.APP_URL}/u/${organization.organization.slug}`,
+			return_url: organization
+				? `${fastify.config.APP_URL}/u/${organization.organization.slug}`
+				: `${fastify.config.APP_URL}/onboarding/comecar`,
 			locale: "pt-BR",
 		});
 

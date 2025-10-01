@@ -33,7 +33,7 @@ export const subscriptions = pgTable("subscriptions", {
 		onDelete: "set null",
 	}),
 	stripeId: text().notNull().unique(),
-	createdAt: timestamp("created_at"),
+	createdAt: timestamp("created_at").defaultNow(),
 	endAt: timestamp("end_at"),
 });
 
