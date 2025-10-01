@@ -166,7 +166,6 @@ export default function (
 				where: () =>
 					and(
 						eq(threads.persona, request.persona!.id),
-						eq(threads.author, request.user!.id),
 						eq(threads.id, request.params.chatID),
 						isNull(threads.deletedAt),
 					),
@@ -178,10 +177,23 @@ export default function (
 
 			const { shareIds, ...threadData } = thread;
 
-			if (
+			const isVisible =
 				thread?.visibility === "public" ||
-				thread.author.id === request.user?.id
-			) {
+				thread.author.id === request.user?.id;
+
+			const isAdmin = async () => {
+				const member = await fastify.db.query.members.findFirst({
+					where: (mem, { and, eq }) =>
+						and(
+							eq(mem.userId, request.user!.id),
+							eq(mem.organizationId, request.persona!.organization),
+						),
+				});
+
+				return !!member;
+			};
+
+			if (isVisible || (await isAdmin())) {
 				const activeShareId =
 					thread?.visibility === "public" && shareIds.length > 0
 						? shareIds[0].id
