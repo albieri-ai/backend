@@ -286,8 +286,8 @@ export default function (
 
 			const threadData = memberThreads.map((t) => ({
 				...t,
-				messages: undefined,
 				lastMessage: t.messages[t.messages.length - 1],
+				messages: undefined,
 			}));
 
 			return reply.send({
