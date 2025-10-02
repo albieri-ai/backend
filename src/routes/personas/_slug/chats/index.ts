@@ -716,7 +716,7 @@ export default function (
 								.where(eq(userMessages.author, request.user!.id))
 								.then(([res]) => res?.count || 0);
 
-							fastify.posthog.identifyImmediate({
+							await fastify.posthog.identifyImmediate({
 								distinctId: request.user!.id,
 								properties: {
 									messages: messageCount,

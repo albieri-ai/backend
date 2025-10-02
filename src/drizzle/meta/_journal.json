@@ -253,6 +253,13 @@
       "when": 1759336889281,
       "tag": "0035_steady_warhawk",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1759412890495,
+      "tag": "0036_sour_captain_britain",
+      "breakpoints": true
     }
   ]
 }
