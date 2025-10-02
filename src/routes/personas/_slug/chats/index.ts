@@ -476,9 +476,56 @@ export default function (
 				});
 			}
 
+			const lastMessage =
+				request.body.messages[request.body.messages.length - 1];
+
+			const { embedding: lastMessageEmbed } = await embed({
+				model: fastify.ai.providers.openai.embedding("text-embedding-3-small"),
+				value: lastMessage.parts.join(" "),
+			});
+
+			const lastMessageSimilarContent =
+				await fastify.ai.handlers.retrieveContent(
+					request.persona!.id,
+					lastMessageEmbed,
+				);
+
+			const lastMessageContext = lastMessageSimilarContent
+				.map(
+					(content) =>
+						`\n
+						Resumo do Conteúdo: ${content.chunk}
+						`,
+				)
+				.join(
+					`\n
+					----------
+					`,
+				);
+
+			const enhancedLastMessage = `
+	      Aqui está uma pergunta realizada pelo usuário e o contexto que encontramos relacionado a pergunta realizada:
+
+			  <context>
+				${lastMessageContext}
+				</context>
+
+				<question>
+				${lastMessage.parts.join(" ")}
+				</question>
+			`;
+
+			const messagesByUser: UIMessage[] = [
+				...request.body.messages.slice(0, request.body.messages.length - 1),
+				{
+					...lastMessage,
+					parts: [{ type: "text", text: enhancedLastMessage }],
+				},
+			];
+
 			const result = streamText({
 				model: conversationModel,
-				messages: convertToModelMessages(request.body.messages),
+				messages: convertToModelMessages(messagesByUser),
 				system: buildSystemPrompt({ persona: request.persona! }),
 				tools: {
 					retrieve_content: tool({
