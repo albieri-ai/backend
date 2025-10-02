@@ -568,10 +568,10 @@ export default function (
 									`\n
 
 						----------
-						`,
-								)
-								.replace(/\t/g, "")
-								.trim();
+						`
+										.replace(/\t/g, "")
+										.trim(),
+								);
 						},
 					}),
 					retrieve_youtube_video: tool({
@@ -606,12 +606,12 @@ export default function (
 													`\n
 
 							----------
-							`,
+							`
+														.replace(/\t/g, "")
+														.trim(),
 												)
 										: `Nenhum conteúdo foi encontrado para: ${query}`,
-								)
-								.replace(/\t/g, "")
-								.trim();
+								);
 						},
 					}),
 					retrive_course: tool({
@@ -643,12 +643,12 @@ export default function (
 													`\n
 
 							----------
-							`,
+							`
+														.replace(/\t/g, "")
+														.trim(),
 												)
 										: `Nenhum conteúdo foi encontrado para: ${query}`,
-								)
-								.replace(/\t/g, "")
-								.trim();
+								);
 						},
 					}),
 					retrieve_course_module: tool({
@@ -683,12 +683,12 @@ export default function (
 													`\n
 
 								----------
-								`,
+								`
+														.replace(/\t/g, "")
+														.trim(),
 												)
 										: `Nenhum conteúdo foi encontrado para: ${query}`,
-								)
-								.replace(/\t/g, "")
-								.trim();
+								);
 						},
 					}),
 					retrieve_course_lessons: tool({
@@ -724,12 +724,12 @@ export default function (
 													`\n
 
 									----------
-									`,
+									`
+														.replace(/\t/g, "")
+														.trim(),
 												)
 										: `Nenhum conteúdo foi encontrado para: ${query}`,
-								)
-								.replace(/\t/g, "")
-								.trim();
+								);
 						},
 					}),
 					ask_for_help: tool({
