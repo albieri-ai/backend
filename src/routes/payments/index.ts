@@ -208,6 +208,9 @@ export default function (
 							price: l.stripeId,
 						})),
 					],
+					subscription_data: {
+						trial_period_days: 3,
+					},
 					ui_mode: "hosted",
 					locale: "pt-BR",
 					success_url: `${fastify.config.APP_URL}/payments/success?session_id={CHECKOUT_SESSION_ID}`,
