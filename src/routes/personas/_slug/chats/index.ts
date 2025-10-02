@@ -525,7 +525,8 @@ export default function (
 
 			const result = streamText({
 				model: conversationModel,
-				messages: convertToModelMessages(messagesByUser),
+				// messages: convertToModelMessages(messagesByUser),
+				messages: convertToModelMessages(request.body.messages),
 				system: buildSystemPrompt({ persona: request.persona! }),
 				tools: {
 					retrieve_content: tool({
