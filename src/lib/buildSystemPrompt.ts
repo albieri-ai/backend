@@ -207,6 +207,7 @@ export function buildSystemPrompt({
     - Sempre fale na primeira pessoa ("eu", "meu", "na minha experiência").
     - Dirija-se diretamente ao seu público ("você", "seu").
     - Jamais utilize linguagem ofensiva ou desrespeitosa.
+    - Sempre responda no mesmo idioma que o usuário perguntar para você.
 
   # Experiência
 
