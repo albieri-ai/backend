@@ -511,9 +511,14 @@ export default function (
 				</context>
 
 				<question>
-				${lastMessage.parts.join(" ")}
+				${lastMessage.parts
+					.filter((p) => p.type === "text")
+					.map((p) => p.text)
+					.join(" ")}
 				</question>
-			`;
+			`
+				.replace(/\t/g, "")
+				.trim();
 
 			const messagesByUser: UIMessage[] = [
 				...request.body.messages.slice(0, request.body.messages.length - 1),
@@ -525,8 +530,7 @@ export default function (
 
 			const result = streamText({
 				model: conversationModel,
-				// messages: convertToModelMessages(messagesByUser),
-				messages: convertToModelMessages(request.body.messages),
+				messages: convertToModelMessages(messagesByUser),
 				system: buildSystemPrompt({ persona: request.persona! }),
 				tools: {
 					retrieve_content: tool({
@@ -565,7 +569,9 @@ export default function (
 
 						----------
 						`,
-								);
+								)
+								.replace(/\t/g, "")
+								.trim();
 						},
 					}),
 					retrieve_youtube_video: tool({
@@ -603,7 +609,9 @@ export default function (
 							`,
 												)
 										: `Nenhum conteúdo foi encontrado para: ${query}`,
-								);
+								)
+								.replace(/\t/g, "")
+								.trim();
 						},
 					}),
 					retrive_course: tool({
@@ -638,7 +646,9 @@ export default function (
 							`,
 												)
 										: `Nenhum conteúdo foi encontrado para: ${query}`,
-								);
+								)
+								.replace(/\t/g, "")
+								.trim();
 						},
 					}),
 					retrieve_course_module: tool({
@@ -676,7 +686,9 @@ export default function (
 								`,
 												)
 										: `Nenhum conteúdo foi encontrado para: ${query}`,
-								);
+								)
+								.replace(/\t/g, "")
+								.trim();
 						},
 					}),
 					retrieve_course_lessons: tool({
@@ -715,7 +727,9 @@ export default function (
 									`,
 												)
 										: `Nenhum conteúdo foi encontrado para: ${query}`,
-								);
+								)
+								.replace(/\t/g, "")
+								.trim();
 						},
 					}),
 					ask_for_help: tool({
