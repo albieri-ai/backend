@@ -52,7 +52,13 @@ export function adminOnly(fastify: FastifyInstance) {
 			return reply.callNotFound();
 		}
 
-		request.persona = persona;
+		request.persona = {
+			...persona,
+			photo: {
+				...persona.photo,
+				url: `${fastify.config.BACKEND_URL}/storage/files/${persona.photo.id}/url`,
+			},
+		};
 
 		const [organizationMember] = await fastify.db
 			.select()

@@ -260,6 +260,13 @@
       "when": 1759412890495,
       "tag": "0036_sour_captain_britain",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1759528254223,
+      "tag": "0037_magical_nebula",
+      "breakpoints": true
     }
   ]
 }

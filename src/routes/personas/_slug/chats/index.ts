@@ -9,6 +9,8 @@ import {
 	stepCountIs,
 } from "ai";
 import {
+	helpRequests,
+	humanResponses,
 	threads,
 	threadShareIds,
 	userMessages,
@@ -528,6 +530,8 @@ export default function (
 				},
 			];
 
+			const responseMessageId = createId();
+
 			const result = streamText({
 				model: conversationModel,
 				messages: convertToModelMessages(messagesByUser),
@@ -746,10 +750,17 @@ export default function (
 									helpReason: reason,
 								})
 								.where(eq(threads.id, request.params.chatID));
+
+							await fastify.db.insert(helpRequests).values({
+								message: responseMessageId,
+								originalMessage: lastMessage.id,
+								thread: request.params.chatID,
+								reason,
+							});
 						},
 					}),
 				},
-				stopWhen: stepCountIs(20),
+				stopWhen: stepCountIs(10),
 			});
 
 			reply.header("X-Vercel-AI-Data-Stream", "v1");
@@ -757,7 +768,7 @@ export default function (
 
 			return reply.send(
 				result.toUIMessageStreamResponse({
-					generateMessageId: () => createId(),
+					generateMessageId: () => responseMessageId,
 					originalMessages: request.body.messages,
 					messageMetadata: () => ({
 						createdAt: new Date().toISOString(),
@@ -836,15 +847,22 @@ export default function (
 
 			const updatedMessages = [...thread.messages, newMessage];
 
-			await fastify.db
-				.update(threads)
-				.set({
-					messages: updatedMessages,
-					helpNeeded: false,
-					helpReason: null,
-					updatedAt: sql`NOW()`,
-				})
-				.where(eq(threads.id, request.params.chatID));
+			await fastify.db.transaction(async (trx) => {
+				await trx
+					.update(threads)
+					.set({
+						messages: updatedMessages,
+						helpNeeded: false,
+						helpReason: null,
+						updatedAt: sql`NOW()`,
+					})
+					.where(eq(threads.id, request.params.chatID));
+
+				await trx.insert(humanResponses).values({
+					message: newMessage.id,
+					author: request.user!.id,
+				});
+			});
 
 			return reply.send({
 				data: {

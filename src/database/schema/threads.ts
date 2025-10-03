@@ -8,6 +8,7 @@ import {
 	pgEnum,
 	uniqueIndex,
 	boolean,
+	serial,
 } from "drizzle-orm/pg-core";
 import { users } from "./auth";
 import { personas } from "./personas";
@@ -59,6 +60,25 @@ export const threads = pgTable(
 		),
 	}),
 );
+
+export const humanResponses = pgTable("human_responses", {
+	id: serial().primaryKey(),
+	message: text().notNull(),
+	author: text()
+		.notNull()
+		.references(() => users.id, { onDelete: "set null" }),
+	createdAt: timestamp().defaultNow(),
+});
+
+export const helpRequests = pgTable("help_requests", {
+	id: serial().primaryKey(),
+	message: text().notNull(),
+	originalMessage: text().notNull(),
+	thread: text()
+		.notNull()
+		.references(() => threads.id, { onDelete: "set null" }),
+	reason: text(),
+});
 
 export const threadShareIds = pgTable(
 	"thread_shared_ids",

@@ -243,13 +243,6 @@ export default function (
 					deletedBy: false,
 				},
 				with: {
-					persona: {
-						columns: {
-							id: true,
-							name: true,
-							slug: true,
-						},
-					},
 					author: {
 						columns: {
 							id: true,
@@ -286,6 +279,7 @@ export default function (
 
 			const threadData = memberThreads.map((t) => ({
 				...t,
+				persona: request.persona!,
 				lastMessage: t.messages[t.messages.length - 1],
 				messages: undefined,
 			}));

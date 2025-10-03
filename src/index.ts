@@ -254,6 +254,7 @@ declare module "fastify" {
 				mimeType: string;
 				size: number | null;
 				checksum: string | null;
+				url: string | null;
 			};
 			topics: {
 				topic: {
