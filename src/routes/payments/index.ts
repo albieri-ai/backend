@@ -209,7 +209,7 @@ export default function (
 						})),
 					],
 					subscription_data: {
-						trial_period_days: 3,
+						trial_period_days: 7,
 					},
 					ui_mode: "hosted",
 					locale: "pt-BR",
