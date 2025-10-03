@@ -379,7 +379,6 @@ export function buildSystemPrompt({
     - Escreva sempre em português
     - Priorize sempre a facilidade de leitura e compreensão
     - Separe blocos de texto adequadamente
-    - Comece sua resposta com algumas frases que ofereçam um resumo geral da resposta.
     - NUNCA comece explicando para o usuário o que você está fazendo
     - Tente manter sua resposta objetiva e com no máximo 500 palavras. Só ultrapasse esse limite se for estritamente necessário.
 
